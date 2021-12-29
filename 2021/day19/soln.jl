@@ -61,10 +61,10 @@ function compare_and_find_match(s1, s2, perms)
     for perm in perms
         permuted_s2 = [perm * beacon for beacon in s2]
         if length(intersect(st1, permuted_s2)) >= 12
-            return permuted_s2
+            return (permuted_s2, perm)
         end
     end
-    return []
+    return ([], Matrix{Int64}(undef, 3, 3))
 end
 
 function find_overlap(abeacons, bbeacons)
@@ -72,33 +72,36 @@ function find_overlap(abeacons, bbeacons)
         a_transformed = [other - abeacon for other in abeacons]
         for bbeacon in bbeacons
             b_transformed = [other - bbeacon for other in bbeacons]
-            b_rotated = compare_and_find_match(a_transformed, b_transformed, PERMS)
+            b_rotated, perm = compare_and_find_match(a_transformed, b_transformed, PERMS)
             if !isempty(b_rotated)
-                return [beacon + abeacon for beacon in b_rotated]
+                return ([beacon + abeacon for beacon in b_rotated], perm * (-bbeacon) + abeacon)
             end
         end
     end
-    []
+    ([], [])
 end
 
 function get_first_scanner(scanners)
     for i in 0:100
         if haskey(scanners, i)
-            return pop!(scanners, i)
+            return (pop!(scanners, i), i)
         end
     end
     error("didn't find a first scanner")
 end
 
 function dedup_beacons(scanners)
-    normalized_beacons = Set(get_first_scanner(scanners))
+    first_beacons, first_scanner_num = get_first_scanner(scanners)
+    normalized_beacons = Set(first_beacons)
+    scanner_positions = Dict(first_scanner_num => zeros(Int64, 3))
     while !isempty(scanners)
         found_match = false
         for (scanner_num, beacons) in scanners
-            transformed_beacons = find_overlap(normalized_beacons, beacons)
+            transformed_beacons, scanner_pos = find_overlap(normalized_beacons, beacons)
             if !isempty(transformed_beacons)
                 normalized_beacons = union(normalized_beacons, transformed_beacons)
                 pop!(scanners, scanner_num)
+                scanner_positions[scanner_num] = scanner_pos
                 found_match = true
             end
         end
@@ -106,33 +109,23 @@ function dedup_beacons(scanners)
             error("never found a match!")
         end
     end
-    normalized_beacons
+    (normalized_beacons, scanner_positions)
 end
 
 function problem_one(scanners)
-    length(dedup_beacons(scanners))
+    length(dedup_beacons(scanners)[1])
 end
 
 function manhattan_distance(v1, v2)
     sum(abs.(v1 - v2))
 end
 
-# how far apart do the _scanners_ get...
-
-# where are the scanners, actually?
 function problem_two(scanners)
-    dedupped_beacons = [beacon for beacon in dedup_beacons(scanners)]
-    @show typeof(dedupped_beacons)
-    maximum(manhattan_distance(dedupped_beacons[i], dedupped_beacons[j])
-            for i in 1:length(dedupped_beacons)
-                for j in i + 1:length(dedupped_beacons))
-    # max_man_distance = typemin(Int64)
-    
-    # for i in 1:length(dedupped_beacons)
-    #     for j in i+1:length(dedupped_beacons)
-            
-    #     end
-    # end
+    scanners = dedup_beacons(scanners)[2]
+    scanner_positions = [scanner_pos for scanner_pos in values(scanners)]
+    maximum(manhattan_distance(scanner_positions[i], scanner_positions[j])
+            for i in 1:length(scanner_positions)
+                for j in i + 1:length(scanner_positions))
 end
 
 function main(args)
