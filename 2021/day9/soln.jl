@@ -34,7 +34,6 @@ function get_low_points(heatmap)
     for j in 1:cols
         for i in 1:rows
             if low_point(i, j, heatmap)
-                # @show i, j, heatmap[i, j]
                 push!(low_points, (i, j))
             end
         end
@@ -49,22 +48,9 @@ function problem_one(heatmap)
         n += heatmap[i, j] + 1
     end
     n
-    # risk_levels = Vector{Int8}()
-    # rows, cols = size(heatmap)
-    # for j in 1:cols
-    #     for i in 1:rows
-    #         if low_point(i, j, heatmap)
-    #             @show i, j, heatmap[i, j]
-    #             push!(risk_levels, heatmap[i, j] + 1)
-    #         end
-    #     end
-    # end
-    # sum(risk_levels)
 end
 
 function find_basin(low_point, heatmap)
-    @show low_point
-    @show typeof(low_point)
     explored = Set{Tuple{Int64, Int64}}()
     push!(explored, low_point)
     frontier = Vector{Tuple{Int64, Int64}}()
@@ -92,8 +78,6 @@ function find_basin(low_point, heatmap)
 end
 
 function problem_two(heatmap)
-    @show "hello there"
-    @show heatmap
     low_points = get_low_points(heatmap)
     sizes = [0, 0, 0]
     for low_point in low_points
