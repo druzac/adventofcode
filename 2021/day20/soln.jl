@@ -102,7 +102,6 @@ function image_enhance(image_lookup, image::Image, cnt::Int64)
     for _ in 1:cnt
         output_image = image_enhance(image_lookup, output_image)
     end
-    @show size(output_image)
     output_image
 end
 
@@ -116,22 +115,4 @@ function problem_two(problem)
     image_lookup, input_image = problem
     output_image = image_enhance(image_lookup, input_image, 50)
     sumpixels(output_image)
-end
-
-function main(args)
-    problem_number = args[1]
-    inputf = args[2]
-
-    problem = parse_problem(inputf)
-    if problem_number == "1"
-        @show problem_one(problem)
-    elseif problem_number == "2"
-        @show problem_two(problem)
-    else
-        error("Need to put in 1 or 2")
-    end
-end
-
-if PROGRAM_FILE != "" && realpath(@__FILE__) == realpath(PROGRAM_FILE)
-    main(ARGS)
 end

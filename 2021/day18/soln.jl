@@ -1,5 +1,3 @@
-import Test
-
 abstract type SnailfishNumber end
 
 @enum Direction left right
@@ -302,50 +300,4 @@ function problem_two(problem)
                                magnitude(add_and_fully_reduce!(deepcopy(problem[j]), deepcopy(problem[i]))))
                               for i in 1:length(problem)
                                   for j in i + 1:length(problem)))
-end
-
-function main(args)
-    problem_number = args[1]
-    inputf = args[2]
-
-    problem = parse_problem(inputf)
-    if problem_number == "1"
-        @show problem_one(problem)
-    elseif problem_number == "2"
-        @show problem_two(problem)
-    else
-        error("Need to put in 1 or 2")
-    end
-end
-
-if PROGRAM_FILE != "" && realpath(@__FILE__) == realpath(PROGRAM_FILE)
-    main(ARGS)
-end
-
-function test_reduce(input, expected, reduce_action)
-    arg = read_snailfishnumber(input)
-    expected = read_snailfishnumber(expected)
-    Test.@test reduce!(arg) == reduce_action
-    Test.@test arg == expected
-end
-
-Test.@testset "reduce" begin
-    test_reduce("[[[[[9,8],1],2],3],4]", "[[[[0,9],2],3],4]", true)
-    test_reduce("[[[[[9,8],1],2],3],4]", "[[[[0,9],2],3],4]", true)
-    test_reduce("[7,[6,[5,[4,[3,2]]]]]", "[7,[6,[5,[7,0]]]]", true)
-    test_reduce("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]", "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]", true)
-    test_reduce("[[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]", "[[[[0,7],4],[7,[[8,4],9]]],[1,1]]", true)
-    test_reduce("[[[[0,7],4],[7,[[8,4],9]]],[1,1]]", "[[[[0,7],4],[15,[0,13]]],[1,1]]", true)
-    test_reduce("[[[[0,7],4],[15,[0,13]]],[1,1]]", "[[[[0,7],4],[[7,8],[0,13]]],[1,1]]", true)
-    test_reduce("[[[[0,7],4],[[7,8],[0,13]]],[1,1]]", "[[[[0,7],4],[[7,8],[0,[6,7]]]],[1,1]]", true)
-    test_reduce("[[[[0,7],4],[[7,8],[0,[6,7]]]],[1,1]]", "[[[[0,7],4],[[7,8],[6,0]]],[8,1]]", true)
-    test_reduce("[[[[0,7],4],[[7,8],[6,0]]],[8,1]]", "[[[[0,7],4],[[7,8],[6,0]]],[8,1]]", false)
-end
-
-Test.@testset "add" begin
-    arg1 = read_snailfishnumber("[[[[4,3],4],4],[7,[[8,4],9]]]")
-    arg2 = read_snailfishnumber("[1,1]")
-    after_addition = read_snailfishnumber("[[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]")
-    actual = add(arg1, arg2)
-    Test.@test actual == after_addition
 end

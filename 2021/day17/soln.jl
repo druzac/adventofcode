@@ -38,6 +38,14 @@ function parse_problem(inputf)
 end
 
 function problem_one(problem)
+    # i solved this part using math on the subway.
+
+    # the probe passes its starting location at the same speed going
+    # downward it has when initially fired with a positive y
+    # velocity. given the submarine is above the target region, find
+    # the largest y that is still within the box.
+    # to get the maximum height achieved, use the summation identity:
+    # \sum(i=1..n)(i) == n * (n + 1) / 2
 end
 
 function x_pos_alt(xv0, t)
@@ -150,22 +158,4 @@ function problem_two(patch)
         end
     end
     cnt
-end
-
-function main(args)
-    problem_number = args[1]
-    inputf = args[2]
-
-    problem = parse_problem(inputf)
-    if problem_number == "1"
-        @show problem_one(problem)
-    elseif problem_number == "2"
-        @show problem_two(problem)
-    else
-        error("Need to put in 1 or 2")
-    end
-end
-
-if PROGRAM_FILE != "" && realpath(@__FILE__) == realpath(PROGRAM_FILE)
-    main(ARGS)
 end

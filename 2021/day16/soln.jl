@@ -230,7 +230,6 @@ function parse_operator_packet(bio)
     if mode_bit == 0
         packets = Vector{Packet}()
         total_sub_packet_length = bits_to_num(read_n_bits(bio, 15))
-        # @show total_sub_packet_length
         current_sub_length = 0
         while current_sub_length < total_sub_packet_length
             packet = parse_packet(bio)
@@ -241,7 +240,6 @@ function parse_operator_packet(bio)
     else
         packets = Vector{Packet}()
         total_sub_packet_count = bits_to_num(read_n_bits(bio, 11))
-        # @show total_sub_packet_count
         while length(packets) < total_sub_packet_count
             packet = parse_packet(bio)
             push!(packets, packet)
@@ -262,7 +260,6 @@ function parse_literal_packet(bio)
     while true
         read_bits += 5
         block = read_n_bits(bio, 5)
-        # @show block
         has_next_block = block[1]
         for bit in block[2:5]
             number = number << 1 + bit
@@ -284,7 +281,6 @@ function parse_packet(bio)
     header = peek_n_bits(bio, 6)
     version = read_three(header[1:3])
     type = read_three(header[4:6])
-    # @show header, version, type
     if type == 4
         parse_literal_packet(bio)
     else
@@ -320,42 +316,4 @@ function problem_two(inputf)
         packet = parse_packet(bio)
         compute_value(packet)
     end
-end
-
-function main(args)
-    problem_number = args[1]
-    inputf = args[2]
-
-    problem = parse_problem(inputf)
-    if problem_number == "1"
-        @show problem_one(problem)
-    elseif problem_number == "2"
-        @show problem_two(problem)
-    else
-        error("Need to put in 1 or 2")
-    end
-end
-
-function string_to_packet(hexs)
-    parse_packet(HexToBinaryStream(IOBuffer(hexs)))
-end
-
-if PROGRAM_FILE != "" && realpath(@__FILE__) == realpath(PROGRAM_FILE)
-    # @show string_to_packet("38006F45291200")
-    # @show string_to_packet("EE00D40C823060")
-    main(ARGS)
-end
-
-Test.@testset "packet tests" begin
-    Test.@test string_to_packet("D2FE28") == LiteralPacket(6, 2021, 21)
-    Test.@test compute_value(string_to_packet("C200B40A82")) == 3
-    Test.@test compute_value(string_to_packet("04005AC33890")) == 54
-    Test.@test compute_value(string_to_packet("880086C3E88112")) == 7
-    Test.@test compute_value(string_to_packet("CE00C43D881120")) == 9
-    Test.@test compute_value(string_to_packet("D8005AC2A8F0")) == 1
-    Test.@test compute_value(string_to_packet("F600BC2D8F")) == 0
-    Test.@test compute_value(string_to_packet("9C005AC2F8F0")) == 0
-    Test.@test compute_value(string_to_packet("9C0141080250320F1802104A08")) == 1
-    # can't get this to pass...
-    # Test.@test string_to_packet("38006F45291200") == OperatorPacket(1, 6, [LiteralPacket(6, 10, 11), LiteralPacket(2, 20, 16)], 49)
 end

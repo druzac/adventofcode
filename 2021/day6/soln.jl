@@ -1,8 +1,6 @@
-
 NEW_LANTERNFISH_START = 9
 POST_BIRTH_LANTERNFISH = 7
 
-# array of lanternfish
 function tick(lanternfish)
     births = lanternfish[1]
     new_lanternfish = zeros(Int128, size(lanternfish))
@@ -24,34 +22,16 @@ function parse_problem(inputf)
     @show lanternfish
 end
 
-function problem_one(inputf)
-    # lanternfish = [0, 1, 1, 2, 1, 0, 0, 0, 0]
-    lanternfish = parse_problem(inputf)
+function problem_one(lanternfish)
     for i in 1:80
         lanternfish = tick(lanternfish)
     end
     sum(lanternfish)
 end
 
-function problem_two(inputf)
-    lanternfish = parse_problem(inputf)
+function problem_two(lanternfish)
     for i in 1:256
         lanternfish = tick(lanternfish)
     end
     sum(lanternfish)
-end
-
-function main(args)
-    problem = args[1]
-    input = args[2]
-
-    if problem == "1"
-        @show problem_one(input)
-    elseif problem == "2"
-        @show problem_two(input)
-    end
-end
-
-if PROGRAM_FILE != "" && realpath(@__FILE__) == realpath(PROGRAM_FILE)
-    main(ARGS)
 end

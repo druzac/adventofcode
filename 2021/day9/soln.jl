@@ -1,4 +1,3 @@
-
 function parse_problem(inputf)
     all_lines = readlines(inputf)
     cols = length(all_lines[1])
@@ -92,25 +91,4 @@ function problem_two(heatmap)
         # size_sums += find_basin(low_point, heatmap)
     end
     reduce(*, sizes)
-end
-
-# bfs from the low points.
-# or dfs, doesn't matter
-
-function main(args)
-    problem_number = args[1]
-    inputf = args[2]
-
-    problem = parse_problem(inputf)
-    if problem_number == "1"
-        @show problem_one(problem)
-    elseif problem_number == "2"
-        @show problem_two(problem)
-    else
-        error("Need to put in 1 or 2")
-    end
-end
-
-if PROGRAM_FILE != "" && realpath(@__FILE__) == realpath(PROGRAM_FILE)
-    main(ARGS)
 end

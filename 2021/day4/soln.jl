@@ -1,13 +1,3 @@
-
-# numbers called
-# list of boards
-
-# iterate through boards. build an index -> number to board, board index.
-# iterate through numbers...
-
-# Board type - has a matrix, and a bitmatrix
-# bitmatrix shows which thingies are marked.
-
 struct Board
     raw_board::Matrix{Int64}
     numbers::Dict{Int64, Tuple{Int64, Int64}}
@@ -23,7 +13,6 @@ struct Board
     end
 end
 
-# returns true if we got a bingo
 function mark_board(b::Board, number)
     idx = get(b.numbers, number, nothing)
     if idx != nothing
@@ -40,7 +29,6 @@ end
 
 function calculate_score(b::Board, number)
     unmarked_ids = map(!, b.filled)
-    @show sum(b.raw_board[unmarked_ids])
     sum(b.raw_board[unmarked_ids]) * number
 end
 
@@ -79,7 +67,7 @@ struct Problem
     boards::Set{Board}
 end
 
-function parse_input(inputf)
+function parse_problem(inputf)
     open(inputf, "r") do io
         numbers_line = readline(io)
 
@@ -95,11 +83,9 @@ function parse_input(inputf)
             raw_board[1, :] = first_row_numbers
             for i in 2:5
                 curr_line = readline(io)
-                # @show curr_line
                 curr_line_numbers = map(x -> parse(Int64, x), split(curr_line))
                 raw_board[i, :] = curr_line_numbers
             end
-            # @show raw_board
             push!(boards, Board(raw_board))
 
             readline(io)
@@ -109,25 +95,10 @@ function parse_input(inputf)
     end
 end
 
-function problem_one(inputf)
-    problem = parse_input(inputf)
-    @show play_bingo(problem.boards, problem.numbers)
+function problem_one(problem)
+    play_bingo(problem.boards, problem.numbers)
 end
 
-function problem_two(inputf)
-    problem = parse_input(inputf)
-    @show play_bingo_to_last_board(problem.boards, problem.numbers)
+function problem_two(problem)
+    play_bingo_to_last_board(problem.boards, problem.numbers)
 end
-
-function main(args)
-    problem = args[1]
-    input = args[2]
-
-    if problem == "1"
-        problem_one(input)
-    elseif problem == "2"
-        problem_two(input)
-    end
-end
-
-main(ARGS)

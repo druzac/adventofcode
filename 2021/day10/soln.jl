@@ -1,5 +1,3 @@
-
-
 function parse_problem(inputf)
     readlines(inputf)
 end
@@ -85,14 +83,10 @@ function complete_line(line)
     score
 end
 
-
 function problem_one(problem)
     score = 0
     for line in problem
         line_score = score_line(line)
-        if line_score > 0
-            @show line, line_score
-        end
         score += line_score
     end
     score
@@ -103,31 +97,11 @@ function problem_two(problem)
     for line in problem
         line_score = complete_line(line)
         if line_score > 0
-            @show line, line_score
             push!(scores, line_score)
         end
     end
-    @show length(scores)
     if length(scores) % 2 != 1
         error("bad length")
     end
     sort(scores)[length(scores) ÷ 2 + 1]
-end
-
-function main(args)
-    problem_number = args[1]
-    inputf = args[2]
-
-    problem = parse_problem(inputf)
-    if problem_number == "1"
-        @show problem_one(problem)
-    elseif problem_number == "2"
-        @show problem_two(problem)
-    else
-        error("Need to put in 1 or 2")
-    end
-end
-
-if PROGRAM_FILE != "" && realpath(@__FILE__) == realpath(PROGRAM_FILE)
-    main(ARGS)
 end

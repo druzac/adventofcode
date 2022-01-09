@@ -1,16 +1,3 @@
-# climbing pants
-# personality traits book
-# being mortal - not possible
-# something warm?
-# pet not a bird, not a turtle, not a fish. no hamsters. furry w/ four legs
-
-# a -> 1
-# b -> 
-
-# construct map: number to bv
-# then at the end, go back from
-# bv to word...
-
 function word_to_bvector(word)
     bv = BitVector(0 for _ in 1:7)
     for char in word
@@ -22,8 +9,6 @@ end
 function parse_problem(inputf)
     signal_patterns = Vector{Tuple{Vector{BitVector}, Vector{BitVector}}}()
     for line in readlines(inputf)
-        # @show line
-        # @show typeof(line)
         words = split(line)
         all_patterns = word_to_bvector.(words[1:10])
         output_words = words[12:15]
@@ -46,8 +31,6 @@ function problem_one(problem)
     for subp in problem
         d = Dict{Int64, BitVector}()
         for pattern in subp[1]
-            # @show pattern
-            # @show count(pattern)
             cnt = count(pattern)
             if cnt == 2
                 d[1] = pattern
@@ -162,27 +145,7 @@ function problem_two(problem)
     sum = 0
     for subp in problem
         digit_assoc = get_digit_map(subp[1])
-        # @show 
         sum += output_patterns_to_number(digit_assoc, subp[2])
-        # @show digit_assoc
     end
     sum
-end
-
-function main(args)
-    problem_number = args[1]
-    inputf = args[2]
-
-    problem = parse_problem(inputf)
-    if problem_number == "1"
-        @show problem_one(problem)
-    elseif problem_number == "2"
-        @show problem_two(problem)
-    else
-        error("Need to put in 1 or 2")
-    end
-end
-
-if PROGRAM_FILE != "" && realpath(@__FILE__) == realpath(PROGRAM_FILE)
-    main(ARGS)
 end

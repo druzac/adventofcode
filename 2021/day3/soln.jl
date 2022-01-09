@@ -25,10 +25,12 @@ function lines_to_bitmatrix(lines)
     bits
 end
 
-function problem_one(input)
-    bits = lines_to_bitmatrix(readlines(input))
+function parse_problem(inputf)
+    lines_to_bitmatrix(readlines(inputf))
+end
+
+function problem_one(bits)
     ncols = size(bits, 2)
-    @show bits
     gamma = BitArray(undef, ncols)
     for j in 1:ncols
         col = @view bits[1:end, j]
@@ -42,10 +44,9 @@ function problem_one(input)
     end
     epsilon = .! gamma
 
-    @show (epsilon, gamma)
     int_gamma = bitarr_to_int(gamma)
     int_epsilon = bitarr_to_int(epsilon)
-    @show int_gamma * int_epsilon
+    int_gamma * int_epsilon
 end
 
 # the criteria takes:
@@ -88,30 +89,8 @@ function apply_criteria(bitmatrix, bit_criteria, curr_col)
     apply_criteria(filtered, bit_criteria, curr_col + 1)
 end
 
-function problem_two(input)
-    bits = lines_to_bitmatrix(readlines(input))
-
+function problem_two(bits)
     oxygen_val = apply_criteria(bits, oxygen_bit_criteria)
     co2_scrubber_val = apply_criteria(bits, co2_scrubber_bit_criteria)
-    @show (oxygen_val', co2_scrubber_val')
-    @show bitarr_to_int(oxygen_val')
-    @show bitarr_to_int(co2_scrubber_val')
-    @show bitarr_to_int(oxygen_val') * bitarr_to_int(co2_scrubber_val')
+    bitarr_to_int(oxygen_val') * bitarr_to_int(co2_scrubber_val')
 end
-
-function main(args)
-    problem = args[1]
-    input = args[2]
-
-    if problem == "1"
-        problem_one(input)
-    elseif problem == "2"
-        problem_two(input)
-    else
-        error("Must input 1 or 2 for first argument.")
-    end
-
-end
-
-main(ARGS)
-
