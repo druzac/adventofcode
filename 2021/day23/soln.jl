@@ -1,3 +1,5 @@
+import .Common
+
 @enum Amphipod amber bronze copper desert none
 
 struct State
@@ -6,83 +8,6 @@ struct State
     big_rooms::Bool
     parent_state::Union{Nothing, State}
     move_cost::Int64
-end
-
-struct MinHeap
-    arr::Vector{Tuple{Int64, State}}
-    MinHeap() = new(Vector{Tuple{Int64, State}}())
-end
-
-function Base.isempty(mh::MinHeap)
-    isempty(mh.arr)
-end
-
-function parentidx(i)
-    i ÷ 2
-end
-
-function lchildidx(i)
-    2 * i
-end
-
-function rchildidx(i)
-    2 * i + 1
-end
-
-function insert!(minheap, k, state)
-    push!(minheap.arr, (k, state))
-    current_k = k
-    current_idx = length(minheap.arr)
-    while true
-        parenti = parentidx(current_idx)
-        if parenti < 1
-            break
-        end
-        parent = minheap.arr[parenti]
-        if k < parent[1]
-            minheap.arr[current_idx] = parent
-            minheap.arr[parenti] = (k, state)
-            current_idx = parenti
-        else
-            break
-        end
-    end
-end
-
-function extract!(minheap)
-    if isempty(minheap.arr)
-        error("empty heap")
-    end
-    if length(minheap.arr) == 1
-        return pop!(minheap.arr)
-    end
-    result = minheap.arr[1]
-    minheap.arr[1] = minheap.arr[end]
-    pop!(minheap.arr)
-    current_idx = 1
-    k, val = minheap.arr[1]
-    num_visits = 0
-    while current_idx < length(minheap.arr)
-        num_visits += 1
-        lchildi = lchildidx(current_idx)
-        rchildi = rchildidx(current_idx)
-        if lchildi > length(minheap.arr)
-            break
-        end
-        alternatives = [(minheap.arr[lchildi][1], lchildi)]
-        if rchildi <= length(minheap.arr)
-            push!(alternatives, (minheap.arr[rchildi][1], rchildi))
-        end
-        min_alternative_key = minimum(x -> x[1], alternatives)
-        if min_alternative_key < k
-            swap_idx = argmin(x -> x[1], alternatives)[2]
-            minheap.arr[current_idx], minheap.arr[swap_idx] = minheap.arr[swap_idx], minheap.arr[current_idx]
-            current_idx = swap_idx
-        else
-            break
-        end
-    end
-    return result
 end
 
 function initial_state(rooms, big_rooms)
@@ -294,12 +219,12 @@ end
 
 function dijkstra(start_state)
     visited = Set{State}()
-    mh = MinHeap()
-    insert!(mh, 0, start_state)
+    mh = Common.MinHeap{State}()
+    Common.insert!(mh, 0, start_state)
     num_iterations = 0
     while !isempty(mh)
         num_iterations += 1
-        current_cost, current_state = extract!(mh)
+        current_cost, current_state = Common.extract!(mh)
         if current_state in visited
             continue
         end
@@ -309,7 +234,7 @@ function dijkstra(start_state)
         push!(visited, current_state)
         for (neighbour, mcost) in neighbours(current_state)
             new_cost = mcost + current_cost
-            insert!(mh, new_cost, neighbour)
+            Common.insert!(mh, new_cost, neighbour)
         end
     end
     error("didn't find solution!")

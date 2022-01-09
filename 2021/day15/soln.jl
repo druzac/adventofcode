@@ -1,84 +1,8 @@
-import Test
+import .Common
 
 const Point = Tuple{Int64, Int64}
 
 const MAX_COST = 9
-
-struct MinHeap
-    # k, value pairs
-    arr::Vector{Tuple{Int64, Point}}
-    MinHeap() = new(Vector{Tuple{Int64, Point}}())
-    # could add a dict in here to speed things up.
-    # Dict{Point, Int64} - point to idx. allows us to implement update key more efficiently
-end
-
-function parentidx(i)
-    i ÷ 2
-end
-
-function lchildidx(i)
-    2 * i
-end
-
-function rchildidx(i)
-    2 * i + 1
-end
-
-function insert!(minheap, k, point)
-    push!(minheap.arr, (k, point))
-    current_k = k
-    current_idx = length(minheap.arr)
-    while true
-        parenti = parentidx(current_idx)
-        if parenti < 1
-            break
-        end
-        parent = minheap.arr[parenti]
-        if k < parent[1]
-            minheap.arr[current_idx] = parent
-            minheap.arr[parenti] = (k, point)
-            current_idx = parenti
-        else
-            break
-        end
-    end
-end
-
-function extract!(minheap)
-    if isempty(minheap.arr)
-        error("empty heap")
-    end
-    if length(minheap.arr) == 1
-        return pop!(minheap.arr)
-    end
-    result = minheap.arr[1]
-    minheap.arr[1] = minheap.arr[end]
-    pop!(minheap.arr)
-    current_idx = 1
-    k, val = minheap.arr[1]
-    num_visits = 0
-    while current_idx < length(minheap.arr)
-        num_visits += 1
-        lchildi = lchildidx(current_idx)
-        rchildi = rchildidx(current_idx)
-        if lchildi > length(minheap.arr)
-            break
-        end
-        alternatives = [(minheap.arr[lchildi][1], lchildi)]
-        if rchildi <= length(minheap.arr)
-            push!(alternatives, (minheap.arr[rchildi][1], rchildi))
-        end
-        min_alternative_key = minimum(x -> x[1], alternatives)
-        if min_alternative_key < k
-            swap_idx = argmin(x -> x[1], alternatives)[2]
-            minheap.arr[current_idx], minheap.arr[swap_idx] = minheap.arr[swap_idx], minheap.arr[current_idx]
-            current_idx = swap_idx
-        else
-            break
-        end
-    end
-    return result
-end
 
 struct ExtendedCave
     m::Matrix{Int64}
@@ -150,7 +74,7 @@ function matrix_dijkstra(grid)
     costs[current_node] = 0
     unexplored = Dict{Tuple{Int64, Int64}, Int64}()
     visited = Set{Point}([current_node])
-    mh = MinHeap()
+    mh = Common.MinHeap{Point}()
     num_visits = 0
     while current_node != size(grid)
         num_visits += 1
@@ -162,13 +86,13 @@ function matrix_dijkstra(grid)
             new_node_val = min(costs[current_node] + grid[neighbour[1], neighbour[2]], curr_node_val)
             if new_node_val < curr_node_val
                 unexplored[neighbour] = new_node_val
-                insert!(mh, new_node_val, neighbour)
+                Common.insert!(mh, new_node_val, neighbour)
             end
         end
-        current_node = extract!(mh)[2]
+        current_node = Common.extract!(mh)[2]
         push!(visited, current_node)
         while !haskey(unexplored, current_node)
-            current_node = extract!(mh)[2]
+            current_node = Common.extract!(mh)[2]
         end
         costs[current_node] = pop!(unexplored, current_node)
     end

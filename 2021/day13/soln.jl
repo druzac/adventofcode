@@ -81,8 +81,6 @@ function problem_two(problem)
         bm = foldpaper(bm, fold)
     end
     displaypaper(bm)
-    # display(map(x -> x ? '#' : '.', bm))
-    # println()
 end
 
 function main(args)
