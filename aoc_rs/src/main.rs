@@ -1,5 +1,3 @@
-// use crate::y2022;
-
 mod y2022;
 
 use std::env;
