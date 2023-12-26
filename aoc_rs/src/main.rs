@@ -7,11 +7,9 @@ use std::num::ParseIntError;
 use std::path;
 use std::str::FromStr;
 
-// need to move this
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct AOCError {
-    // well this is useless. when converted.
     file: &'static str,
     line: u32,
     error_kind: AOCErrorKind,
@@ -88,9 +86,6 @@ pub(crate) use aocerror;
 
 fn main() -> Result<(), AOCError> {
     let args: Vec<String> = env::args().collect();
-    // arguments:
-    // year day part problem_dir file_name
-    // problem_dir - directory with problem files
     if args.len() != 6 {
         println!("usage: {} year day part problem_dir file_name", args[0]);
         return Err(aocerror!("bad command line: {:?}", args));
