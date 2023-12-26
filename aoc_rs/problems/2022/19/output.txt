@@ -1,0 +1,242 @@
+√ ~/practice/adventofcode/rs_solns/2022/day/19 % ./soln p1 < example.txt
+***********START
+
+original state: SearchState { remaining_time: 24, current_resources: Resources { ore: 0, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 } }
+built robot: 0
+remaining_time: 19
+resources_left_over: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, new_income: Resources { ore: 2, clay: 0, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 24, current_resources: Resources { ore: 0, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 } }
+built robot: 1
+remaining_time: 21
+resources_left_over: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 1, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, new_income: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 19, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 0, obsidian: 0, geode: 0 } }
+built robot: 0
+remaining_time: 17
+resources_left_over: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 0, obsidian: 0, geode: 0 }, new_income: Resources { ore: 3, clay: 0, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 19, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 0, obsidian: 0, geode: 0 } }
+built robot: 1
+remaining_time: 18
+resources_left_over: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 1, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 0, obsidian: 0, geode: 0 }, new_income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 21, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 0
+remaining_time: 17
+resources_left_over: Resources { ore: 1, clay: 4, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 21, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 1
+remaining_time: 19
+resources_left_over: Resources { ore: 1, clay: 2, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 1, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 1, clay: 2, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 21, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 2
+remaining_time: 6
+resources_left_over: Resources { ore: 13, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 0, obsidian: 1, geode: 0 }, income: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 1, clay: 1, obsidian: 1, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 17, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 0, obsidian: 0, geode: 0 } }
+built robot: 0
+remaining_time: 15
+resources_left_over: Resources { ore: 3, clay: 0, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 0, obsidian: 0, geode: 0 }, new_income: Resources { ore: 4, clay: 0, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 17, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 0, obsidian: 0, geode: 0 } }
+built robot: 1
+remaining_time: 16
+resources_left_over: Resources { ore: 2, clay: 0, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 1, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 0, obsidian: 0, geode: 0 }, new_income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 18, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 0
+remaining_time: 16
+resources_left_over: Resources { ore: 1, clay: 2, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 18, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 1
+remaining_time: 17
+resources_left_over: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 1, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 2, clay: 2, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 18, current_resources: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 2
+remaining_time: 3
+resources_left_over: Resources { ore: 28, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 0, obsidian: 1, geode: 0 }, income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 2, clay: 1, obsidian: 1, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 17, current_resources: Resources { ore: 1, clay: 4, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 2
+remaining_time: 6
+resources_left_over: Resources { ore: 20, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 0, obsidian: 1, geode: 0 }, income: Resources { ore: 2, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 2, clay: 1, obsidian: 1, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 19, current_resources: Resources { ore: 1, clay: 2, obsidian: 0, geode: 0 }, income: Resources { ore: 1, clay: 2, obsidian: 0, geode: 0 } }
+built robot: 2
+remaining_time: 12
+resources_left_over: Resources { ore: 5, clay: 2, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 0, obsidian: 1, geode: 0 }, income: Resources { ore: 1, clay: 2, obsidian: 0, geode: 0 }, new_income: Resources { ore: 1, clay: 2, obsidian: 1, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 15, current_resources: Resources { ore: 3, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 4, clay: 0, obsidian: 0, geode: 0 } }
+built robot: 0
+remaining_time: 14
+resources_left_over: Resources { ore: 3, clay: 0, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 4, clay: 0, obsidian: 0, geode: 0 }, new_income: Resources { ore: 5, clay: 0, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 16, current_resources: Resources { ore: 2, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 0
+remaining_time: 15
+resources_left_over: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 4, clay: 1, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 16, current_resources: Resources { ore: 2, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 1
+remaining_time: 15
+resources_left_over: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 1, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 3, clay: 2, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 16, current_resources: Resources { ore: 2, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 2
+remaining_time: 1
+resources_left_over: Resources { ore: 44, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 0, obsidian: 1, geode: 0 }, income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 3, clay: 1, obsidian: 1, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 16, current_resources: Resources { ore: 1, clay: 2, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 2
+remaining_time: 3
+resources_left_over: Resources { ore: 37, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 0, obsidian: 1, geode: 0 }, income: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 3, clay: 1, obsidian: 1, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 17, current_resources: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 }, income: Resources { ore: 2, clay: 2, obsidian: 0, geode: 0 } }
+built robot: 2
+remaining_time: 10
+resources_left_over: Resources { ore: 12, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 0, obsidian: 1, geode: 0 }, income: Resources { ore: 2, clay: 2, obsidian: 0, geode: 0 }, new_income: Resources { ore: 2, clay: 2, obsidian: 1, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 14, current_resources: Resources { ore: 3, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 5, clay: 0, obsidian: 0, geode: 0 } }
+built robot: 0
+remaining_time: 13
+resources_left_over: Resources { ore: 4, clay: 0, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 5, clay: 0, obsidian: 0, geode: 0 }, new_income: Resources { ore: 6, clay: 0, obsidian: 0, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 15, current_resources: Resources { ore: 1, clay: 1, obsidian: 0, geode: 0 }, income: Resources { ore: 4, clay: 1, obsidian: 0, geode: 0 } }
+built robot: 2
+remaining_time: 1
+resources_left_over: Resources { ore: 54, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 0, obsidian: 1, geode: 0 }, income: Resources { ore: 4, clay: 1, obsidian: 0, geode: 0 }, new_income: Resources { ore: 4, clay: 1, obsidian: 1, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 15, current_resources: Resources { ore: 3, clay: 1, obsidian: 0, geode: 0 }, income: Resources { ore: 3, clay: 2, obsidian: 0, geode: 0 } }
+built robot: 2
+remaining_time: 8
+resources_left_over: Resources { ore: 21, clay: 1, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 0, clay: 0, obsidian: 1, geode: 0 }, income: Resources { ore: 3, clay: 2, obsidian: 0, geode: 0 }, new_income: Resources { ore: 3, clay: 2, obsidian: 1, geode: 0 }
+
+
+***********END
+***********START
+
+original state: SearchState { remaining_time: 13, current_resources: Resources { ore: 4, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 6, clay: 0, obsidian: 0, geode: 0 } }
+built robot: 0
+remaining_time: 12
+resources_left_over: Resources { ore: 6, clay: 0, obsidian: 0, geode: 0 }
+resource from idx: Resources { ore: 1, clay: 0, obsidian: 0, geode: 0 }, income: Resources { ore: 6, clay: 0, obsidian: 0, geode: 0 }, new_income: Resources { ore: 7, clay: 0, obsidian: 0, geode: 0 }
+
+
+***********END
+result: 0
