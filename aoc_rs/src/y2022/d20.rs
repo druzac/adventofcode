@@ -32,7 +32,6 @@ struct UpperNode {
 #[derive(Debug, PartialEq, Eq)]
 enum Node {
     Leaf(Vec<MixListElement>),
-    // right size is just set for easier construction, it's not used after.
     Upper(UpperNode),
 }
 
@@ -42,99 +41,124 @@ struct MixList {
 }
 
 impl MixList {
-    // is a power of 2:
-    // number of leaves:
-    // v.len().div_ceil(chunk_size)
-    // num.count_ones() == 1
 
-    // this isn't right.
     fn new(v: &[i64], chunk_size: usize) -> MixList {
         let num_leaves = v.len().div_ceil(chunk_size);
         if v.is_empty() || num_leaves == 1 {
-            // this is an edge case, don't worry for now.
             return MixList {
                 nodes: vec![Node::Upper(UpperNode { left_size: v.len() }),
                             Node::Leaf(v.iter().map(|x| MixListElement::new(*x)).collect())]
             }
         }
-        // new stuff
         let num_leaves = v.len().div_ceil(chunk_size);
-        let greatest_le_pow_2 = if num_leaves.is_power_of_two() { num_leaves } else { num_leaves.next_power_of_two() >> 1 };
-        let parents_in_second_last_layer = num_leaves - greatest_le_pow_2;
-        let leaves_in_second_last_layer = greatest_le_pow_2 - parents_in_second_last_layer;
-        let leaves_in_last_layer = num_leaves - leaves_in_second_last_layer;
-        println!("num_leaves: {}, parents in second last layer: {}, leaves in second last layer: {}, leaves in last layer: {}", num_leaves,
-                 parents_in_second_last_layer, leaves_in_second_last_layer, leaves_in_last_layer);
-        let mut last_layer = Vec::new();
-        let mut v_iter = v.iter();
-        while leaves.len() < leaves_in_last_layer && v_iter {
-            let mut current_leaf = vec![];
-            while current_leaf.size() < chunk_size {
-                if let Some(next_v) = v_iter.next() {
-                    current_leaf.push();
-                } else {
-                    // need to break out of top level while
-                }
-            }
+        if num_leaves.is_power_of_two() {
+            let mut leaves = Vec::with_capacity(num_leaves);
+            let mut current_leaf = Vec::with_capacity(chunk_size);
             for el in v.iter() {
                 if current_leaf.len() >= chunk_size {
                     leaves.push(current_leaf);
                     current_leaf = Vec::new();
                 }
                 current_leaf.push(MixListElement::new(*el));
-        }
-
-        }
-        leaves.push(current_leaf);
-        // end new stuff
-
-        // old stuff
-        // let mut current_leaf = Vec::with_capacity(chunk_size);
-        // for el in v.iter() {
-        //     if current_leaf.len() >= chunk_size {
-        //         leaves.push(current_leaf);
-        //         current_leaf = Vec::new();
-        //     }
-        //     current_leaf.push(MixListElement::new(*el));
-        // }
-        // leaves.push(current_leaf);
-        // now do the other layers
-        let mut current_layer = Vec::with_capacity(leaves.len() / 2);
-        for i in (0..leaves.len()).step_by(2) {
-            let left_size = leaves[i].len();
-            let right_size = leaves.get(i + 1).map(|v| v.len()).unwrap_or(0);
-            current_layer.push((UpperNode { left_size: left_size }, right_size));
-        }
-        let mut upper_layers = Vec::new();
-        let mut last_layer = current_layer;
-        while last_layer.len() > 1 {
-            current_layer = Vec::with_capacity(last_layer.len() / 2);
-            for i in (0..last_layer.len()).step_by(2) {
-                let left_size = last_layer[i].0.left_size + last_layer[i].1;
-                let right_size = last_layer.get(i + 1).map(|(mid, rsize)| mid.left_size + rsize).unwrap_or(0);
+            }
+            leaves.push(current_leaf);
+            let mut current_layer = Vec::with_capacity(leaves.len() / 2);
+            for i in (0..leaves.len()).step_by(2) {
+                let left_size = leaves[i].len();
+                let right_size = leaves.get(i + 1).map(|v| v.len()).unwrap_or(0);
                 current_layer.push((UpperNode { left_size: left_size }, right_size));
             }
-            upper_layers.push(last_layer);
-            last_layer = current_layer;
-        }
-        // at this point, we have:
-        // leaf_nodes
-        // upper_layers
-        // last_layer should be the root.
-        let mut nodes = Vec::with_capacity(leaves.len() * 2);
-        match last_layer.pop() {
-            Some((node, _)) => nodes.push(Node::Upper(node)),
-            _ => panic!(),
-        }
-        for layer in upper_layers.into_iter().rev() {
-            for (node, _) in layer.into_iter() {
-                nodes.push(Node::Upper(node));
+            let mut upper_layers = Vec::new();
+            let mut last_layer = current_layer;
+            while last_layer.len() > 1 {
+                current_layer = Vec::with_capacity(last_layer.len() / 2);
+                for i in (0..last_layer.len()).step_by(2) {
+                    let left_size = last_layer[i].0.left_size + last_layer[i].1;
+                    let right_size = last_layer.get(i + 1).map(|(mid, rsize)| mid.left_size + rsize).unwrap_or(0);
+                    current_layer.push((UpperNode { left_size: left_size }, right_size));
+                }
+                upper_layers.push(last_layer);
+                last_layer = current_layer;
             }
+            let mut nodes = Vec::with_capacity(num_leaves * 2);
+            match last_layer.pop() {
+                Some((node, _)) => nodes.push(Node::Upper(node)),
+                _ => panic!(),
+            }
+            for layer in upper_layers.into_iter().rev() {
+                for (node, _) in layer.into_iter() {
+                    nodes.push(Node::Upper(node));
+                }
+            }
+            for leaf in leaves.into_iter() {
+                nodes.push(Node::Leaf(leaf));
+            }
+            MixList { nodes: nodes }
+        } else {
+            let greatest_le_pow_2 = num_leaves.next_power_of_two() >> 1;
+            let parents_in_second_last_layer = num_leaves - greatest_le_pow_2;
+            let leaves_in_second_last_layer = greatest_le_pow_2 - parents_in_second_last_layer;
+            let leaves_in_last_layer = num_leaves - leaves_in_second_last_layer;
+            let mut bottom_leaves = Vec::with_capacity(leaves_in_last_layer);
+            let mut current_leaf = Vec::with_capacity(chunk_size);
+            for el in &v[0..leaves_in_last_layer * chunk_size] {
+                if current_leaf.len() >= chunk_size {
+                    bottom_leaves.push(current_leaf);
+                    current_leaf = Vec::new();
+                }
+                current_leaf.push(MixListElement::new(*el));
+            }
+            bottom_leaves.push(current_leaf);
+            let mut current_layer = Vec::with_capacity(bottom_leaves.len() / 2 + leaves_in_second_last_layer);
+            for i in (0..bottom_leaves.len()).step_by(2) {
+                let left_size = bottom_leaves[i].len();
+                let right_size = bottom_leaves.get(i + 1).map(|v| v.len()).unwrap_or(0);
+                current_layer.push((Node::Upper(UpperNode { left_size: left_size }), right_size));
+            }
+            // add the remaining leaves to the current layer
+            current_leaf = Vec::with_capacity(chunk_size);
+            for el in &v[leaves_in_last_layer * chunk_size..] {
+                if current_leaf.len() >= chunk_size {
+                    current_layer.push((Node::Leaf(current_leaf), 0));
+                    current_leaf = Vec::new();
+                }
+                current_leaf.push(MixListElement::new(*el));
+            }
+            current_layer.push((Node::Leaf(current_leaf), 0));
+            let mut last_layer = current_layer;
+            let mut upper_layers = Vec::new();
+            while last_layer.len() > 1 {
+                current_layer = Vec::with_capacity(last_layer.len() / 2);
+                for i in (0..last_layer.len()).step_by(2) {
+                    let left_size = match &last_layer[i] {
+                        (Node::Upper(parent), right_size) => parent.left_size + right_size,
+                        (Node::Leaf(l), right_size) => l.len() + right_size,
+                    };
+                    let right_size = match last_layer.get(i + 1) {
+                        None => 0,
+                        Some((Node::Upper(parent), right_size)) => parent.left_size + right_size,
+                        Some((Node::Leaf(l), right_size)) => l.len() + right_size,
+                    };
+                    current_layer.push((Node::Upper(UpperNode { left_size: left_size }), right_size));
+                }
+                upper_layers.push(last_layer);
+                last_layer = current_layer;
+            }
+            let mut nodes = Vec::with_capacity(num_leaves * 2);
+            match last_layer.pop() {
+                Some((node, _)) => nodes.push(node),
+                _ => panic!(),
+            }
+            for layer in upper_layers.into_iter().rev() {
+                for (node, _) in layer.into_iter() {
+                    nodes.push(node);
+                }
+            }
+            for leaf in bottom_leaves.into_iter() {
+                nodes.push(Node::Leaf(leaf));
+            }
+            MixList { nodes: nodes }
         }
-        for leaf in leaves.into_iter() {
-            nodes.push(Node::Leaf(leaf));
-        }
-        MixList { nodes: nodes }
     }
 
     fn get(&self, idx: usize) -> Option<&MixListElement> {
@@ -197,7 +221,6 @@ impl MixList {
 
     // panics if idx > len
     fn insert(&mut self, idx: usize, el: MixListElement) {
-        // println!("top level insert: {}", idx);
         self.insert_helper(idx, 0, el)
     }
 
@@ -205,22 +228,17 @@ impl MixList {
         let mut went_left = false;
         match self.nodes.get_mut(node_idx) {
             Some(Node::Upper(next_node)) => {
-                // don't use checked_sub here because we want to append in the happy case.
                 match element_idx.checked_sub(next_node.left_size) {
-                    // special case - append to the end on the left instead of inserting at the beginning on the right
                     None | Some(0) => {
-                        // println!("recursive insert {}, {}: upper node: {:?}, going left", element_idx, node_idx, next_node);
                         went_left = true;
                         self.insert_helper(element_idx, node_idx * 2 + 1, el)
                     },
                     Some(delta) => {
-                        // println!("recursive insert {}, {}: upper node: {:?}, going right", element_idx, node_idx, next_node);
                         self.insert_helper(delta, node_idx * 2 + 2, el)
                     },
                 }
             },
             Some(Node::Leaf(v)) => {
-                // println!("recursive insert {}, {}: leaf node with size: {}", element_idx, node_idx, v.len());
                 v.insert(element_idx, el);
             },
             None => (),
@@ -278,7 +296,6 @@ impl<'a> Iterator for MixListIterator<'a> {
                 return Some(el);
             }
         }
-        // now current_leaf is None
         while let Some(node_idx) = self.node_idx_stack.pop() {
             match self.mixlist.nodes.get(node_idx) {
                 Some(Node::Upper(_)) => {
@@ -299,12 +316,6 @@ impl<'a> Iterator for MixListIterator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // #[test]
-    // fn test_div_ceil() {
-    //     let n: u64 = 0;
-    //     assert_eq!(n.div_ceil(2), 1);
-    // }
 
     #[test]
     fn test_create_single() {
@@ -349,13 +360,6 @@ mod tests {
     }
 
     #[test]
-    fn test_insert() {
-        for idx in 0..7 {
-            let mut mixlist = MixList::new(&(0..7).collect::<Vec<i64>>(), 2);
-        }
-    }
-
-    #[test]
     fn test_iterator() {
         let source_vec = (0..16).collect::<Vec<i64>>();
         let mixlist = MixList::new(&source_vec, 2);
@@ -363,19 +367,19 @@ mod tests {
                    source_vec);
     }
 
-    // fails: 150, 25
-    // divide by 25?
-    // 6, 1
-    // 12, 2?
-    // #[test]
-    // fn test_big_chunks() {
-    //     let size = 10;
-    //     let mixlist = MixList::new(&(0..size).collect::<Vec<i64>>(), 2);
-    //     mixlist.print();
-    //     for i in 0..size {
-    //         assert_eq!(mixlist.get(i as usize), Some(&MixListElement::new(i as i64)));
-    //     }
-    // }
+    #[test]
+    fn test_imperfect_trees() {
+        for total_elements in 10..20 {
+            let range = 0..total_elements;
+            let mixlist = MixList::new(&range.clone().collect::<Vec<i64>>(), 2);
+            mixlist.print();
+            for i in 0..total_elements {
+                assert_eq!(mixlist.get(i as usize), Some(&MixListElement::new(i as i64)));
+            }
+            assert_eq!(mixlist.iter().map(|el| el.value).collect::<Vec<i64>>(),
+                       range.collect::<Vec<i64>>());
+        }
+    }
 }
 
 fn parse_problem<B: io::BufRead>(br: B) -> Result<Vec<i64>, AOCError> {
@@ -390,18 +394,13 @@ fn problem1(raw_vec: Vec<i64>) -> i64 {
     let chunk_size = if raw_vec.len() <= 50 {
         2
     } else {
-        // MixList::new only works for a power of 2 number of nodes. 5000 = 2**3 * 5**4
-        625
+        100
     };
     let mut mixlist = MixList::new(&raw_vec, chunk_size);
     let mut idx = 0;
     let total_size = raw_vec.len();
     let size_but_one = total_size as i64 - 1;
-
-    // println!("first element of mixlist: {:?}, first element of vec: {}", mixlist.get(0), raw_vec[0]);
     while idx < total_size {
-        // println!("\n******* dumping list before remove call with args: {}  *******", idx);
-        // mixlist.print();
         let el = match mixlist.remove_unmixed(idx) {
             Some(el) => el,
             None => { idx += 1; continue; },
@@ -414,16 +413,10 @@ fn problem1(raw_vec: Vec<i64>) -> i64 {
         while new_idx > size_but_one as i64 {
             new_idx -= size_but_one as i64;
         }
-        // println!("idx of mixlist: {}, existing el: {:?}, new el: {:?}, new_idx: {}", idx, el, new_el, new_idx);
         assert!(new_idx >= 1 && new_idx <= size_but_one as i64);
-        // println!("\n******* dumping list before call with args: {}, {:?}  *******", new_idx, new_el);
-        // mixlist.print();
-        // println!("list looks like: {:?}, arguments to insert: {}, {:?}", mixlist, new_idx, new_el);
         mixlist.insert(new_idx as usize, new_el);
     }
-    // mixlist.print();
     let idx = mixlist.iter().enumerate().find_map(|(idx, el)| if el.value == 0 { Some(idx) } else { None }).unwrap();
-    println!("zero idx: {}", idx);
     let mut sum = 0;
     for delta in [1000, 2000, 3000] {
         sum += mixlist.get((idx + delta) % total_size).unwrap().value;
