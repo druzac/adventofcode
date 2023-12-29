@@ -12,6 +12,7 @@ mod d16;
 mod d17;
 mod d18;
 mod d19;
+mod d20;
 mod d5;
 mod d6;
 mod d7;
@@ -35,6 +36,7 @@ pub fn solve<B: io::BufRead>(day: &str, part: ProblemPart, br: B) -> Result<(), 
         "17" => d17::solve(part, br),
         "18" => d18::solve(part, br),
         "19" => d19::solve(part, br),
+        "20" => d20::solve(part, br),
         _ => Err(aocerror!("invalid day: {}", day)),
     }
 }
