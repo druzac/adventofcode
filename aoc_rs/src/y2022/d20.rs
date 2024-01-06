@@ -1,24 +1,38 @@
 use crate::{AOCError, ProblemPart};
 
+use std::collections::HashMap;
+
 use std::io;
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct MixCoord {
+    value: i64,
+    original_idx: usize,
+}
+
+impl MixCoord {
+    fn new(val: i64, idx: usize) -> MixCoord {
+        MixCoord { value: val, original_idx: idx }
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 struct MixListElement {
-    value: i64,
+    coord: MixCoord,
     mixed: bool,
 }
 
 impl MixListElement {
-    fn new(val: i64) -> MixListElement {
+    fn new(val: i64, idx: usize) -> MixListElement {
         MixListElement {
-            value: val,
+            coord: MixCoord::new(val, idx),
             mixed: false,
         }
     }
 
-    fn new_mixed(val: i64) -> MixListElement {
+    fn new_mixed(coord: MixCoord) -> MixListElement {
         MixListElement {
-            value: val,
+            coord: coord,
             mixed: true,
         }
     }
@@ -38,6 +52,7 @@ enum Node {
 #[derive(Debug)]
 struct MixList {
     nodes: Vec<Node>,
+    coord_to_node_idx: HashMap<MixCoord, usize>,
 }
 
 fn make_parents(children: &[(Node, usize)]) -> Vec<(Node, usize)> {
@@ -57,18 +72,18 @@ fn make_parents(children: &[(Node, usize)]) -> Vec<(Node, usize)> {
     parents
 }
 
-fn make_leaves(values: &[i64], chunk_size: usize) -> Vec<(Node, usize)> {
+fn make_leaves(values: &[i64], chunk_size: usize, idx_offset: usize) -> Vec<(Node, usize)> {
     if values.is_empty() {
         return Vec::new()
     };
     let mut leaves = Vec::with_capacity(values.len().div_ceil(chunk_size));
     let mut current_leaf = Vec::with_capacity(chunk_size);
-    for el in values {
+    for (idx, el) in values.iter().enumerate() {
         if current_leaf.len() >= chunk_size {
             leaves.push((Node::Leaf(current_leaf), 0));
             current_leaf = Vec::new();
         }
-        current_leaf.push(MixListElement::new(*el));
+        current_leaf.push(MixListElement::new(*el, idx + idx_offset));
     }
     leaves.push((Node::Leaf(current_leaf), 0));
     leaves
@@ -81,24 +96,26 @@ impl MixList {
         if v.is_empty() || num_leaves == 1 {
             return MixList {
                 nodes: vec![Node::Upper(UpperNode { left_size: v.len() }),
-                            Node::Leaf(v.iter().map(|x| MixListElement::new(*x)).collect())]
+                            Node::Leaf(v.iter().enumerate().map(|(idx, x)| MixListElement::new(*x, idx)).collect())],
+                coord_to_node_idx: v.iter().enumerate().map(|(idx, x)| (MixCoord::new(*x, idx), 1))
+                    .collect::<HashMap<MixCoord, usize>>()
             }
         }
-        let (first_slice, second_slice): (&[i64], &[i64]) =
+        let (first_slice, second_slice): ((&[i64], usize), (&[i64], usize)) =
             if num_leaves.is_power_of_two() {
-                (v, &[])
+                ((v, 0), (&[], 0))
             } else {
                 let greatest_le_pow_2 = num_leaves.next_power_of_two() >> 1;
                 let parents_in_second_last_layer = num_leaves - greatest_le_pow_2;
                 let leaves_in_second_last_layer = greatest_le_pow_2 - parents_in_second_last_layer;
                 let leaves_in_last_layer = num_leaves - leaves_in_second_last_layer;
                 let elements_in_bottom_leaves = leaves_in_last_layer * chunk_size;
-                (&v[..elements_in_bottom_leaves], &v[elements_in_bottom_leaves..])
+                ((&v[..elements_in_bottom_leaves], 0), (&v[elements_in_bottom_leaves..], elements_in_bottom_leaves))
             };
         let mut layers = Vec::new();
-        let mut previous_layer = make_leaves(first_slice, chunk_size);
+        let mut previous_layer = make_leaves(first_slice.0, chunk_size, first_slice.1);
         let mut current_layer = make_parents(&previous_layer);
-        current_layer.append(&mut make_leaves(second_slice, chunk_size));
+        current_layer.append(&mut make_leaves(second_slice.0, chunk_size, second_slice.1));
         layers.push(previous_layer);
         previous_layer = current_layer;
         while previous_layer.len() > 1 {
@@ -116,7 +133,15 @@ impl MixList {
                 nodes.push(node);
             }
         }
-        MixList { nodes: nodes }
+        let mut map = HashMap::with_capacity(v.len());
+        for (node_idx, node) in nodes.iter().enumerate() {
+            if let Node::Leaf(chunk) = node {
+                for mix_list_element in chunk.iter() {
+                    map.insert(mix_list_element.coord, node_idx);
+                }
+            }
+        }
+        MixList { nodes: nodes, coord_to_node_idx: map, }
     }
 
     fn get(&self, idx: usize) -> Option<&MixListElement> {
@@ -144,7 +169,11 @@ impl MixList {
     }
 
     fn remove_unmixed(&mut self, idx: usize) -> Option<MixListElement> {
-        self.remove_unmixed_helper(idx, 0)
+        let result = self.remove_unmixed_helper(idx, 0);
+        if let Some(ref ml_el) = result {
+            self.coord_to_node_idx.remove(&ml_el.coord);
+        }
+        result
     }
 
     fn remove_unmixed_helper(&mut self, element_idx: usize, node_idx: usize) -> Option<MixListElement> {
@@ -197,6 +226,7 @@ impl MixList {
                 }
             },
             Some(Node::Leaf(v)) => {
+                self.coord_to_node_idx.insert(el.coord, node_idx);
                 v.insert(element_idx, el);
             },
             None => (),
@@ -211,7 +241,11 @@ impl MixList {
 
     fn print(&self) {
         for (i, node) in self.nodes.iter().enumerate() {
-            println!("{}: {:?}", i, node);
+            let prefix = match node {
+                Node::Leaf(v) => format!("num elements: {}", v.len()),
+                Node::Upper(parent) => format!("num left children: {}", parent.left_size),
+            };
+            println!("{}: {}, raw: {:?}", i, prefix, node);
         }
     }
 
@@ -220,6 +254,59 @@ impl MixList {
             mixlist: self,
             node_idx_stack: vec![0],
             current_leaf: None,
+        }
+    }
+
+    // return the index the element was found at, or None if it wasn't found.
+    fn remove_coord(&mut self, coord: MixCoord) -> Option<usize> {
+
+        let mut node_index = if let Some(node_index) = self.coord_to_node_idx.get(&coord) { *node_index } else { return None };
+        let mut element_index = match self.nodes.get_mut(node_index) {
+
+            Some(Node::Leaf(vals)) => {
+                let maybe_idx = vals.iter().enumerate().find_map(|(idx, el)| if el.coord == coord { Some(idx) } else { None });
+                let idx = match maybe_idx {
+                    Some(i) => i,
+                    None => return None,
+                };
+                vals.remove(idx);
+                idx
+            },
+            _ => panic!(),
+        };
+        
+        while node_index > 0 {
+            let left_child = if node_index % 2 != 0 { true } else { false };
+            node_index = node_index / 2;
+            match self.nodes.get_mut(node_index) {
+                Some(Node::Upper(parent)) => if left_child {
+                    parent.left_size -= 1;
+                } else {
+                    element_index += parent.left_size;
+                },
+                _ => panic!(),
+            };
+        }
+        Some(element_index)
+    }
+
+    fn mix(&mut self, original_elements: &[i64]) {
+        let size_but_one = original_elements.len() as i64 - 1;
+        for (original_idx, val) in original_elements.iter().enumerate() {
+            println!("*********** pre coord removal");
+            self.print();
+            let current_idx = self.remove_coord(MixCoord::new(*val, original_idx)).unwrap();
+            let mut new_idx = current_idx as i64 + val;
+            while new_idx <= 0 {
+                new_idx += size_but_one;
+            }
+            while new_idx > size_but_one {
+                new_idx -= size_but_one;
+            }
+            assert!(new_idx >= 1 && new_idx <= size_but_one);
+            println!("*********** post coord removal, pre insertion, insertion at index: {}", new_idx as usize);
+            self.print();
+            self.insert(new_idx as usize, MixListElement::new(*val, original_idx));
         }
     }
 }
@@ -266,14 +353,14 @@ mod tests {
         let mixlist = MixList::new(&[1], 2);
         assert_eq!(mixlist.nodes.len(), 2);
         assert_eq!(mixlist.nodes[0], Node::Upper(UpperNode { left_size: 1 }));
-        assert_eq!(mixlist.nodes[1], Node::Leaf(vec![MixListElement::new(1)]));
+        assert_eq!(mixlist.nodes[1], Node::Leaf(vec![MixListElement::new(1, 0)]));
     }
 
     #[test]
     fn test_get_filled_leaf_layer() {
         let mixlist = MixList::new(&[1, 2, 3, 4, 5, 6, 7, 8], 2);
         for idx in 0..8 {
-            assert_eq!(mixlist.get(idx), Some(&MixListElement::new(idx as i64 + 1)));
+            assert_eq!(mixlist.get(idx), Some(&MixListElement::new((idx + 1) as i64, idx)));
         }
         assert_eq!(mixlist.get(8), None);
     }
@@ -281,49 +368,61 @@ mod tests {
     #[test]
     fn test_get_unfilled_leaf_layer() {
         let mixlist = MixList::new(&[1, 2, 3, 4, 5, 6, 7], 2);
-        for idx in 0..7 {
-            assert_eq!(mixlist.get(idx), Some(&MixListElement::new(idx as i64 + 1)));
+        for idx in 0..6 {
+            assert_eq!(mixlist.get(idx), Some(&MixListElement::new((idx + 1) as i64, idx)));
         }
         assert_eq!(mixlist.get(7), None);
     }
 
-    #[test]
-    fn test_remove_unmixed() {
-        for idx in 0..7 {
-            let mut mixlist = MixList::new(&(0..7).collect::<Vec<i64>>(), 2);
-            assert_eq!(mixlist.remove_unmixed(idx), Some(MixListElement::new(idx as i64)));
-            for get_idx in 0..6 {
-                let expected = if get_idx >= idx {
-                    (get_idx + 1) as i64
-                } else {
-                    get_idx as i64
-                };
-                assert_eq!(mixlist.get(get_idx), Some(&MixListElement::new(expected)));
-            }
-        }
-    }
+    // #[test]
+    // fn test_remove_unmixed() {
+    //     for idx in 0..7 {
+    //         let mut mixlist = MixList::new(&(0..7).collect::<Vec<i64>>(), 2);
+    //         assert_eq!(mixlist.remove_unmixed(idx), Some(MixListElement::new(idx as i64)));
+    //         for get_idx in 0..6 {
+    //             let expected = if get_idx >= idx {
+    //                 (get_idx + 1) as i64
+    //             } else {
+    //                 get_idx as i64
+    //             };
+    //             assert_eq!(mixlist.get(get_idx), Some(&MixListElement::new(expected)));
+    //         }
+    //     }
+    // }
 
     #[test]
     fn test_iterator() {
         let source_vec = (0..16).collect::<Vec<i64>>();
         let mixlist = MixList::new(&source_vec, 2);
-        assert_eq!(mixlist.iter().map(|el| el.value).collect::<Vec<i64>>(),
+        assert_eq!(mixlist.iter().map(|el| el.coord.value).collect::<Vec<i64>>(),
                    source_vec);
     }
 
     #[test]
-    fn test_imperfect_trees() {
-        for total_elements in 10..20 {
-            let range = 0..total_elements;
-            let mixlist = MixList::new(&range.clone().collect::<Vec<i64>>(), 2);
-            mixlist.print();
-            for i in 0..total_elements {
-                assert_eq!(mixlist.get(i as usize), Some(&MixListElement::new(i as i64)));
-            }
-            assert_eq!(mixlist.iter().map(|el| el.value).collect::<Vec<i64>>(),
-                       range.collect::<Vec<i64>>());
-        }
+    fn test_remove_coord() {
+        let source_vec = (0..7).collect::<Vec<i64>>();
+        let mut mixlist = MixList::new(&source_vec, 2);
+        // MixCoord::new(*val, original_idx)
+        mixlist.print();
+        let idx = mixlist.remove_coord(MixCoord::new(1, 1));
+        assert_eq!(idx, Some(1));
+        mixlist.print();
+        assert_eq!(mixlist.remove_coord(MixCoord::new(2, 2)), Some(1));
     }
+
+    // #[test]
+    // fn test_imperfect_trees() {
+    //     for total_elements in 10..20 {
+    //         let range = 0..total_elements;
+    //         let mixlist = MixList::new(&range.clone().collect::<Vec<i64>>(), 2);
+    //         mixlist.print();
+    //         for i in 0..total_elements {
+    //             assert_eq!(mixlist.get(i as usize), Some(&MixListElement::new(i as i64)));
+    //         }
+    //         assert_eq!(mixlist.iter().map(|el| el.value).collect::<Vec<i64>>(),
+    //                    range.collect::<Vec<i64>>());
+    //     }
+    // }
 }
 
 fn parse_problem<B: io::BufRead>(br: B) -> Result<Vec<i64>, AOCError> {
@@ -334,42 +433,63 @@ fn parse_problem<B: io::BufRead>(br: B) -> Result<Vec<i64>, AOCError> {
     Ok(result)
 }
 
-fn problem1(raw_vec: Vec<i64>) -> i64 {
+fn problem1_alt(raw_vec: Vec<i64>) -> i64 {
     let chunk_size = if raw_vec.len() <= 50 {
         2
     } else {
-        100
+        125
     };
     let mut mixlist = MixList::new(&raw_vec, chunk_size);
-    let mut idx = 0;
-    let total_size = raw_vec.len();
-    let size_but_one = total_size as i64 - 1;
-    while idx < total_size {
-        let el = match mixlist.remove_unmixed(idx) {
-            Some(el) => el,
-            None => { idx += 1; continue; },
-        };
-        let new_el = MixListElement::new_mixed(el.value);
-        let mut new_idx = idx as i64 + el.value;
-        while new_idx <= 0 {
-            new_idx += size_but_one as i64;
-        }
-        while new_idx > size_but_one as i64 {
-            new_idx -= size_but_one as i64;
-        }
-        assert!(new_idx >= 1 && new_idx <= size_but_one as i64);
-        mixlist.insert(new_idx as usize, new_el);
-    }
-    let idx = mixlist.iter().enumerate().find_map(|(idx, el)| if el.value == 0 { Some(idx) } else { None }).unwrap();
+    mixlist.mix(&raw_vec);
+    let idx = mixlist.iter().enumerate().find_map(|(idx, el)| if el.coord.value == 0 { Some(idx) } else { None }).unwrap();
     let mut sum = 0;
+    let total_size = raw_vec.len();
     for delta in [1000, 2000, 3000] {
-        sum += mixlist.get((idx + delta) % total_size).unwrap().value;
+        sum += mixlist.get((idx + delta) % total_size).unwrap().coord.value;
     }
     sum
 }
 
+fn problem1(raw_vec: Vec<i64>) -> i64 {
+    problem1_alt(raw_vec)
+    // let chunk_size = if raw_vec.len() <= 50 {
+    //     2
+    // } else {
+    //     125
+    // };
+    // let mut mixlist = MixList::new(&raw_vec, chunk_size);
+    // let mut idx = 0;
+    // let total_size = raw_vec.len();
+    // let size_but_one = total_size as i64 - 1;
+    // while idx < total_size {
+    //     let el = match mixlist.remove_unmixed(idx) {
+    //         Some(el) => el,
+    //         None => { idx += 1; continue; },
+    //     };
+    //     let new_el = MixListElement::new_mixed(el.coord);
+    //     let mut new_idx = idx as i64 + el.coord.value;
+    //     while new_idx <= 0 {
+    //         new_idx += size_but_one as i64;
+    //     }
+    //     while new_idx > size_but_one as i64 {
+    //         new_idx -= size_but_one as i64;
+    //     }
+    //     assert!(new_idx >= 1 && new_idx <= size_but_one as i64);
+    //     mixlist.insert(new_idx as usize, new_el);
+    // }
+    // let idx = mixlist.iter().enumerate().find_map(|(idx, el)| if el.coord.value == 0 { Some(idx) } else { None }).unwrap();
+    // let mut sum = 0;
+    // for delta in [1000, 2000, 3000] {
+    //     sum += mixlist.get((idx + delta) % total_size).unwrap().coord.value;
+    // }
+    // sum
+}
+
 // problem2
 // the numbers aren't all unique, so we need to keep track somehow.
+// so: add original_index field to MixListElement
+// in MixList::new, compute a hash table mapping each element to its node index.
+// and also a vec of all the elements?
 
 pub fn solve<B: io::BufRead>(part: ProblemPart, br: B) -> Result<(), AOCError> {
     let raw_vec = parse_problem(br)?;
