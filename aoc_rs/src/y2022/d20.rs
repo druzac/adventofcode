@@ -323,10 +323,7 @@ mod tests {
         let mixlist = MixList::new(&[1, 2, 3, 4, 5, 6, 7, 8], 2);
         for idx in 0..8 {
             let val = (idx + 1) as i64;
-            assert_eq!(
-                mixlist.get(idx),
-                Some(&MixListElement::new(val, idx))
-            );
+            assert_eq!(mixlist.get(idx), Some(&MixListElement::new(val, idx)));
         }
         assert_eq!(mixlist.get(8), None);
     }
@@ -359,7 +356,10 @@ mod tests {
         let mut mixlist = MixList::new(&source_vec, 2);
         let result = mixlist.remove_coord(MixListElement::new(1, 1));
         assert_eq!(result, Some((1, MixListElement::new(1, 1))));
-        assert_eq!(mixlist.remove_coord(MixListElement::new(2, 2)), Some((1, MixListElement::new(2, 2))));
+        assert_eq!(
+            mixlist.remove_coord(MixListElement::new(2, 2)),
+            Some((1, MixListElement::new(2, 2)))
+        );
     }
 }
 
@@ -372,14 +372,15 @@ fn parse_problem<B: io::BufRead>(br: B) -> Result<Vec<i64>, AOCError> {
 }
 
 fn get_chunk_size(raw: &[i64]) -> usize {
-    if raw.len() <= 50 { 2 } else { 125 }
+    if raw.len() <= 50 {
+        2
+    } else {
+        125
+    }
 }
 
 fn get_grove_coordinates(raw_vec: &[i64], mixlist: &MixList) -> i64 {
-    let idx = mixlist
-        .iter()
-        .position(|el| el.value == 0)
-        .unwrap();
+    let idx = mixlist.iter().position(|el| el.value == 0).unwrap();
     let mut sum = 0;
     let total_size = raw_vec.len();
     for delta in [1000, 2000, 3000] {
