@@ -86,25 +86,14 @@ fn make_leaves(values: &[i64], chunk_size: usize, idx_offset: usize) -> Vec<(Nod
 
 impl MixList {
     fn new(v: &[i64], chunk_size: usize) -> MixList {
-        let num_leaves = v.len().div_ceil(chunk_size);
-        if v.is_empty() || num_leaves == 1 {
+        if v.is_empty() {
             return MixList {
-                nodes: vec![
-                    Node::Upper(UpperNode { left_size: v.len() }),
-                    Node::Leaf(
-                        v.iter()
-                            .enumerate()
-                            .map(|(idx, x)| MixListElement::new(*x, idx))
-                            .collect(),
-                    ),
-                ],
-                coord_to_node_idx: v
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, x)| (MixListElement::new(*x, idx), idx))
-                    .collect::<HashMap<MixListElement, usize>>(),
-            };
+                nodes: vec![Node::Upper(UpperNode { left_size: 0 }),
+                            Node::Leaf(Vec::new())],
+                coord_to_node_idx: HashMap::new(),
+            }
         }
+        let num_leaves = v.len().div_ceil(chunk_size);
         let (first_slice, second_slice): ((&[i64], usize), (&[i64], usize)) =
             if num_leaves.is_power_of_two() {
                 ((v, 0), (&[], 0))
@@ -307,7 +296,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore = "doesn't terminate"]
     fn test_create_single() {
         let mixlist = MixList::new(&[1], 2);
         assert_eq!(mixlist.nodes.len(), 2);
