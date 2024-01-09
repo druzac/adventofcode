@@ -88,10 +88,12 @@ impl MixList {
     fn new(v: &[i64], chunk_size: usize) -> MixList {
         if v.is_empty() {
             return MixList {
-                nodes: vec![Node::Upper(UpperNode { left_size: 0 }),
-                            Node::Leaf(Vec::new())],
+                nodes: vec![
+                    Node::Upper(UpperNode { left_size: 0 }),
+                    Node::Leaf(Vec::new()),
+                ],
                 coord_to_node_idx: HashMap::new(),
-            }
+            };
         }
         let num_leaves = v.len().div_ceil(chunk_size);
         let (first_slice, second_slice): ((&[i64], usize), (&[i64], usize)) =
