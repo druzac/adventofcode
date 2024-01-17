@@ -1,22 +1,13 @@
 use crate::{aocerror, AOCError, ProblemPart};
 
 use std::cmp;
-use std::collections::HashSet;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::io;
 use std::str::FromStr;
 
-// times on 10000000:
-// no pruning
-// 22.136
-// 21.931
-// 26.768
-
-// with pruning
-// 16.644
-// 17.189
-// 16.759
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum TetraminoType {
     Horizontal,
     Cross,
@@ -34,22 +25,6 @@ struct Point2D {
 impl Point2D {
     fn new(x: i64, y: i64) -> Point2D {
         Point2D { x: x, y: y }
-    }
-}
-
-impl Ord for Point2D {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        let y_ord = self.y.cmp(&other.y);
-        if y_ord != cmp::Ordering::Equal {
-            return y_ord;
-        }
-        self.x.cmp(&other.x)
-    }
-}
-
-impl cmp::PartialOrd for Point2D {
-    fn partial_cmp(&self, other: &Point2D) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
     }
 }
 
@@ -100,22 +75,6 @@ impl RockShape {
     fn apply_gravity(&self) -> RockShape {
         let new_y = self.bottom_left.y - 1;
         RockShape::new(self.rock_type, Point2D::new(self.bottom_left.x, new_y))
-    }
-}
-
-impl Ord for RockShape {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        let point_ord = self.bottom_left.cmp(&other.bottom_left);
-        if point_ord != cmp::Ordering::Equal {
-            return point_ord;
-        }
-        self.rock_type.cmp(&other.rock_type)
-    }
-}
-
-impl cmp::PartialOrd for RockShape {
-    fn partial_cmp(&self, other: &RockShape) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
     }
 }
 
@@ -273,37 +232,199 @@ impl RockSource {
     }
 }
 
-// |..@@@@.|
-// |.......|
-// |.......|
-// |.......|
-// +-------+
 const CAVERN_LEFT_EDGE: i64 = 0;
 const CAVERN_RIGHT_EDGE: i64 = 8;
 const CAVERN_FLOOR: i64 = 0;
 const FALLING_ROCK_Y_OFFSET: i64 = 4;
 const FALLING_ROCK_X_OFFSET: i64 = 3;
-const GC_FREQUENCY: usize = 1000;
+
+#[derive(Debug)]
+struct SettledRocksVecs {
+    settled_rocks: [NaturalNumberSet; 7],
+    last_reaped_y: u64,
+    highest_y: u64,
+}
+
+impl SettledRocksVecs {
+    fn new() -> SettledRocksVecs {
+        SettledRocksVecs {
+            settled_rocks: [
+                NaturalNumberSet::new(),
+                NaturalNumberSet::new(),
+                NaturalNumberSet::new(),
+                NaturalNumberSet::new(),
+                NaturalNumberSet::new(),
+                NaturalNumberSet::new(),
+                NaturalNumberSet::new(),
+            ],
+            last_reaped_y: 0,
+            highest_y: 0,
+        }
+    }
+
+    fn point_to_coords(&self, point: &Point2D) -> Option<(usize, u64)> {
+        if point.x <= CAVERN_LEFT_EDGE || point.x >= CAVERN_RIGHT_EDGE || point.y < 0 {
+            return None;
+        }
+        let idx = (point.x - (CAVERN_LEFT_EDGE + 1)) as usize;
+        Some((idx, point.y as u64))
+    }
+
+    fn prune_unreachable_depths(&mut self, start: u64, end: u64) {
+        for y in (start..end).rev() {
+            if self.is_passable_horizontal_line(y) {
+                continue;
+            }
+            self.last_reaped_y = y as u64;
+            for sr in self.settled_rocks.iter_mut() {
+                sr.remove_prefix(self.last_reaped_y);
+            }
+            return;
+        }
+    }
+
+    fn is_passable_horizontal_line(&self, y_val: u64) -> bool {
+        for x in CAVERN_LEFT_EDGE + 1..CAVERN_RIGHT_EDGE {
+            if !self.contains(&Point2D::new(x, y_val as i64))
+                && !self.contains(&Point2D::new(x, (y_val + 1) as i64))
+            {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn get_signature<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        for sr in self.settled_rocks.iter() {
+            sr.get_signature(state);
+        }
+    }
+
+    fn intersects_settled_rock(&self, rs: &RockShape) -> bool {
+        if rs.bottom_left.y > self.highest_y as i64 {
+            return false;
+        }
+        for point in rs.points() {
+            if self.contains(&point) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn highest_y(&self) -> i64 {
+        self.highest_y as i64
+    }
+
+    fn contains(&self, point: &Point2D) -> bool {
+        if point.x <= CAVERN_LEFT_EDGE || point.x >= CAVERN_RIGHT_EDGE || point.y <= 0 {
+            return false;
+        }
+        let idx = (point.x - (CAVERN_LEFT_EDGE + 1)) as usize;
+        self.settled_rocks[idx].contains(point.y as u64)
+    }
+
+    fn settle_rock(&mut self, rs: RockShape) -> bool {
+        let mut collision = false;
+        let mut lowest_added_y = u64::MAX;
+        let mut highest_added_y = u64::MIN;
+        for point in rs.points() {
+            assert!(point.y >= 0);
+            lowest_added_y = cmp::min(lowest_added_y, point.y as u64);
+            highest_added_y = cmp::max(highest_added_y, point.y as u64);
+            let (idx, y) = self.point_to_coords(&point).unwrap();
+            collision |= self.settled_rocks[idx].insert(y);
+        }
+        self.highest_y = cmp::max(self.highest_y, highest_added_y);
+        if lowest_added_y < self.last_reaped_y {
+            println!(
+                "settled rock: {:?}, points: {:?}",
+                rs,
+                rs.points().collect::<Vec<_>>()
+            );
+
+            panic!("oops, something broke");
+        }
+        self.prune_unreachable_depths(lowest_added_y, highest_added_y + 1);
+        collision
+    }
+}
+
+#[derive(Debug)]
+struct NaturalNumberSet {
+    nums: Vec<u64>,
+    offset: u64,
+}
+
+impl NaturalNumberSet {
+    fn new() -> NaturalNumberSet {
+        NaturalNumberSet {
+            nums: Vec::new(),
+            offset: 0,
+        }
+    }
+
+    fn contains(&self, n: u64) -> bool {
+        let (idx, mask) = self.num_to_repr(n);
+        if idx >= self.nums.len() {
+            return false;
+        }
+        self.nums[idx] & mask != 0
+    }
+
+    fn remove_prefix(&mut self, mut cutoff: u64) {
+        let rem = cutoff % 64;
+        if rem != 0 {
+            cutoff -= rem;
+        }
+        let lowest_idx_to_keep = self.num_to_repr(cutoff).0;
+        let new_nums = self.nums[lowest_idx_to_keep..].to_vec();
+        self.nums = new_nums;
+        self.offset = cutoff;
+    }
+
+    fn insert(&mut self, n: u64) -> bool {
+        let (idx, mask) = self.num_to_repr(n);
+        while idx >= self.nums.len() {
+            self.nums.push(0);
+        }
+        if self.nums[idx] & mask != 0 {
+            return false;
+        }
+        self.nums[idx] |= mask;
+        true
+    }
+
+    fn num_to_repr(&self, n: u64) -> (usize, u64) {
+        assert!(n >= self.offset);
+        let offset_n = n - self.offset;
+        ((offset_n / 64) as usize, 1 << (offset_n % 64))
+    }
+
+    fn get_signature<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        self.nums.hash(state)
+    }
+}
 
 struct Cavern {
-    settled_rocks: HashSet<Point2D>,
+    settled_rocks: SettledRocksVecs,
     wind_source: WindSource,
     rock_source: RockSource,
-    highest_y: i64,
-    gc_frequency: usize,
-    last_reaped_y: i64,
     added_rocks: usize,
 }
 
 impl Cavern {
     fn new(wind_source: WindSource) -> Cavern {
         Cavern {
-            settled_rocks: HashSet::new(),
+            settled_rocks: SettledRocksVecs::new(),
             wind_source: wind_source,
             rock_source: RockSource::new(),
-            highest_y: CAVERN_FLOOR,
-            gc_frequency: GC_FREQUENCY,
-            last_reaped_y: -1,
             added_rocks: 0,
         }
     }
@@ -320,17 +441,8 @@ impl Cavern {
         false
     }
 
-    fn intersects_settled_rock(&self, rock: &RockShape) -> bool {
-        for point in rock.points() {
-            if self.settled_rocks.contains(&point) {
-                return true;
-            }
-        }
-        false
-    }
-
     fn valid_rock_shape(&self, rock: &RockShape) -> bool {
-        !self.intersects_cavern(rock) && !self.intersects_settled_rock(rock)
+        !self.intersects_cavern(rock) && !self.settled_rocks.intersects_settled_rock(rock)
     }
 
     fn next_falling_rock(&mut self) -> RockShape {
@@ -339,34 +451,9 @@ impl Cavern {
             rtype,
             CAVERN_LEFT_EDGE,
             FALLING_ROCK_X_OFFSET,
-            self.highest_y,
+            self.settled_rocks.highest_y(),
             FALLING_ROCK_Y_OFFSET,
         )
-    }
-
-    fn settle_rock(&mut self, rock: RockShape) -> bool {
-        let mut collision = false;
-        let mut lowest_added_y = i64::MAX;
-        let mut highest_added_y = i64::MIN;
-        for point in rock.points() {
-            lowest_added_y = cmp::min(lowest_added_y, point.y);
-            highest_added_y = cmp::max(highest_added_y, point.y);
-            // self.highest_y = cmp::max(self.highest_y, point.y);
-            collision |= self.settled_rocks.insert(point);
-        }
-        self.highest_y = cmp::max(self.highest_y, highest_added_y);
-        if lowest_added_y < self.last_reaped_y {
-            println!(
-                "count: {}, settled rock: {:?}, points: {:?}",
-                self.added_rocks,
-                rock,
-                rock.points().collect::<Vec<_>>()
-            );
-
-            panic!("oops, something broke");
-        }
-        self.prune_unreachable_depths(lowest_added_y, highest_added_y + 1);
-        collision
     }
 
     fn add_rock(&mut self) {
@@ -381,32 +468,22 @@ impl Cavern {
             if self.valid_rock_shape(&fallen_rs) {
                 next_rs = fallen_rs;
             } else {
-                assert!(self.settle_rock(next_rs));
+                assert!(self.settled_rocks.settle_rock(next_rs));
                 break;
             }
         }
-        // if self.added_rocks % self.gc_frequency == 0 {
-        //     self.prune_unreachable_depths();
-        // }
     }
 
     #[allow(dead_code)]
     fn draw_with_falling_rock(&self, maybe_rock: Option<&RockShape>) {
         println!();
         let mut falling_rock = HashSet::new();
-        let mut max_y = cmp::max(self.highest_y, CAVERN_FLOOR + 3);
+        let max_y = cmp::max(self.settled_rocks.highest_y(), CAVERN_FLOOR + 3);
         if let Some(rock) = maybe_rock {
             for point in rock.points() {
                 assert!(falling_rock.insert(point.clone()));
-                max_y = cmp::max(max_y, point.y);
-                // if let Some(curr_max_y) = max_y {
-                //     Some(cmp::max(curr_max_y, point.y))
-                // } else {
-                //     Some(point.y)
-                // };
             }
         }
-        // let concrete_max_y = max_y.unwrap_or(CAVERN_FLOOR + 3);
         for y in (0..(max_y + 1)).rev() {
             for x in CAVERN_LEFT_EDGE..(CAVERN_RIGHT_EDGE + 1) {
                 let current_point = Point2D::new(x, y);
@@ -429,53 +506,12 @@ impl Cavern {
         println!();
     }
 
-    fn is_passable_horizontal_line(&self, y_val: i64) -> bool {
-        for x in CAVERN_LEFT_EDGE + 1..CAVERN_RIGHT_EDGE {
-            if !self.settled_rocks.contains(&Point2D::new(x, y_val))
-                && !self.settled_rocks.contains(&Point2D::new(x, y_val + 1))
-            {
-                return true;
-            }
-        }
-        false
-    }
-
-    fn prune_unreachable_depths(&mut self, start: i64, end: i64) {
-        // println!("pruning, count: {}", self.added_rocks);
-        // for y in (self.last_reaped_y + 1..self.highest_y).rev() {
-        for y in (start..end).rev() {
-            if self.is_passable_horizontal_line(y) {
-                continue;
-            }
-            self.last_reaped_y = y;
-            // println!("found y: {}", y);
-            // self.draw_with_falling_rock(None);
-            // delete all entries in map which are strictly below y.
-            self.settled_rocks
-                .retain(|point| point.y >= self.last_reaped_y);
-            // self.draw_with_falling_rock(None);
-            return;
-        }
-    }
-
-    #[allow(dead_code)]
-    fn find_criss_crosses(&self) -> Vec<i64> {
-        let mut results = Vec::new();
-        for y in 1..(self.highest_y + 1) {
-            let mut criss_cross = true;
-            for x in CAVERN_LEFT_EDGE + 1..CAVERN_RIGHT_EDGE {
-                if !self.settled_rocks.contains(&Point2D::new(x, y))
-                    && !self.settled_rocks.contains(&Point2D::new(x, y + 1))
-                {
-                    criss_cross = false;
-                    break;
-                }
-            }
-            if criss_cross {
-                results.push(y);
-            }
-        }
-        results
+    fn get_signature(&self) -> u64 {
+        let mut state = DefaultHasher::new();
+        state.write_usize(self.wind_source.idx);
+        state.write_usize(self.rock_source.cnt);
+        self.settled_rocks.get_signature(&mut state);
+        state.finish()
     }
 }
 
@@ -490,21 +526,33 @@ fn problem1(wind_source: WindSource) -> u64 {
     for _ in 0..2022 {
         cavern.add_rock();
     }
-    assert!(cavern.highest_y >= 0);
-    cavern.highest_y as u64
+    let highest_y = cavern.settled_rocks.highest_y();
+    assert!(highest_y >= 0);
+    highest_y as u64
+}
+
+fn cycle_search(cavern: &mut Cavern, max_val: usize) -> (usize, i64) {
+    let mut states = HashMap::new();
+    for _ in 0..max_val {
+        let value = (cavern.added_rocks, cavern.settled_rocks.highest_y());
+        let key = cavern.get_signature();
+        if let Some(existing_value) = states.insert(key, value) {
+            return (value.0 - existing_value.0, value.1 - existing_value.1);
+        }
+        cavern.add_rock();
+    }
+    panic!("no cycle found!");
 }
 
 fn problem2(wind_source: WindSource) -> u64 {
-    println!("eager gc");
     let mut cavern = Cavern::new(wind_source);
-    // the actual requirement:
-    // for _ in 0..1000000000000 {
-    // got a long way to go...
-    for _ in 0..10000000 {
-        cavern.add_rock();
+    let target = 1000000000000 as usize;
+    let (cycle_length, added_height) = cycle_search(&mut cavern, target);
+    while (target - cavern.added_rocks) % cycle_length != 0 {
+        cavern.add_rock()
     }
-    assert!(cavern.highest_y >= 0);
-    cavern.highest_y as u64
+    let number_of_cycles = (target - cavern.added_rocks) / cycle_length;
+    (cavern.settled_rocks.highest_y() + (number_of_cycles as i64) * added_height) as u64
 }
 
 pub fn solve<B: io::BufRead>(part: ProblemPart, br: B) -> Result<(), AOCError> {
@@ -546,28 +594,60 @@ mod tests {
     }
 
     #[test]
-    fn example_single_rock() {
-        let mut cavern = Cavern::new(get_example_wind_source());
-        cavern.add_rock();
-        cavern.add_rock();
-        cavern.add_rock();
-        let expected = vec![
-            RockShape::new(TetraminoType::Horizontal, Point2D::new(3, 1)),
-            RockShape::new(TetraminoType::Cross, Point2D::new(4, 2)),
-            RockShape::new(TetraminoType::L, Point2D::new(1, 4)),
-        ]
-        .iter()
-        .flat_map(|rs| rs.points())
-        .collect::<HashSet<_>>();
-        assert_eq!(cavern.settled_rocks, expected,);
-    }
-
-    #[test]
     fn example_full() {
         let mut cavern = Cavern::new(get_example_wind_source());
         for _ in 0..2022 {
             cavern.add_rock();
         }
-        assert_eq!(cavern.highest_y, 3068);
+        assert_eq!(cavern.settled_rocks.highest_y, 3068);
+    }
+
+    #[test]
+    fn nn_set_contains_high() {
+        let nnset = NaturalNumberSet::new();
+        assert!(!nnset.contains(100));
+    }
+
+    #[test]
+    fn nn_set_insert_small() {
+        let mut nnset = NaturalNumberSet::new();
+        assert!(nnset.insert(0));
+        assert!(nnset.contains(0));
+        assert!(!nnset.contains(100));
+    }
+
+    #[test]
+    fn nn_set_insert_bounds() {
+        let mut nnset = NaturalNumberSet::new();
+        assert!(nnset.insert(64));
+        assert!(nnset.contains(64));
+        assert!(!nnset.contains(63));
+        assert!(!nnset.contains(65));
+    }
+
+    #[test]
+    fn nn_pruning() {
+        let mut nnset = NaturalNumberSet::new();
+        nnset.insert(0);
+        nnset.insert(1);
+        nnset.insert(65);
+        nnset.insert(500);
+        nnset.remove_prefix(64);
+        assert!(nnset.contains(65));
+        assert!(nnset.contains(500));
+    }
+
+    #[test]
+    fn nn_repeat_pruning() {
+        let mut nnset = NaturalNumberSet::new();
+        nnset.insert(0);
+        nnset.insert(1);
+        nnset.insert(65);
+        nnset.insert(129);
+        nnset.remove_prefix(64);
+        assert!(nnset.contains(65));
+        assert!(nnset.contains(129));
+        nnset.remove_prefix(128);
+        assert!(nnset.contains(129));
     }
 }
