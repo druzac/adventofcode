@@ -5,6 +5,17 @@ use std::collections::HashSet;
 use std::io;
 use std::str::FromStr;
 
+// times on 10000000:
+// no pruning
+// 22.136
+// 21.931
+// 26.768
+
+// with pruning
+// 16.644
+// 17.189
+// 16.759
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
 enum TetraminoType {
     Horizontal,
@@ -272,12 +283,16 @@ const CAVERN_RIGHT_EDGE: i64 = 8;
 const CAVERN_FLOOR: i64 = 0;
 const FALLING_ROCK_Y_OFFSET: i64 = 4;
 const FALLING_ROCK_X_OFFSET: i64 = 3;
+const GC_FREQUENCY: usize = 1000;
 
 struct Cavern {
     settled_rocks: HashSet<Point2D>,
     wind_source: WindSource,
     rock_source: RockSource,
     highest_y: i64,
+    gc_frequency: usize,
+    last_reaped_y: i64,
+    added_rocks: usize,
 }
 
 impl Cavern {
@@ -287,6 +302,9 @@ impl Cavern {
             wind_source: wind_source,
             rock_source: RockSource::new(),
             highest_y: CAVERN_FLOOR,
+            gc_frequency: GC_FREQUENCY,
+            last_reaped_y: -1,
+            added_rocks: 0,
         }
     }
 
@@ -328,14 +346,31 @@ impl Cavern {
 
     fn settle_rock(&mut self, rock: RockShape) -> bool {
         let mut collision = false;
+        let mut lowest_added_y = i64::MAX;
+        let mut highest_added_y = i64::MIN;
         for point in rock.points() {
-            self.highest_y = cmp::max(self.highest_y, point.y);
+            lowest_added_y = cmp::min(lowest_added_y, point.y);
+            highest_added_y = cmp::max(highest_added_y, point.y);
+            // self.highest_y = cmp::max(self.highest_y, point.y);
             collision |= self.settled_rocks.insert(point);
         }
+        self.highest_y = cmp::max(self.highest_y, highest_added_y);
+        if lowest_added_y < self.last_reaped_y {
+            println!(
+                "count: {}, settled rock: {:?}, points: {:?}",
+                self.added_rocks,
+                rock,
+                rock.points().collect::<Vec<_>>()
+            );
+
+            panic!("oops, something broke");
+        }
+        self.prune_unreachable_depths(lowest_added_y, highest_added_y + 1);
         collision
     }
 
     fn add_rock(&mut self) {
+        self.added_rocks += 1;
         let mut next_rs = self.next_falling_rock();
         loop {
             let blown_rs = next_rs.apply_wind(self.wind_source.next_jet());
@@ -347,28 +382,32 @@ impl Cavern {
                 next_rs = fallen_rs;
             } else {
                 assert!(self.settle_rock(next_rs));
-                return;
+                break;
             }
         }
+        // if self.added_rocks % self.gc_frequency == 0 {
+        //     self.prune_unreachable_depths();
+        // }
     }
 
     #[allow(dead_code)]
     fn draw_with_falling_rock(&self, maybe_rock: Option<&RockShape>) {
         println!();
         let mut falling_rock = HashSet::new();
-        let mut max_y = None;
+        let mut max_y = cmp::max(self.highest_y, CAVERN_FLOOR + 3);
         if let Some(rock) = maybe_rock {
             for point in rock.points() {
                 assert!(falling_rock.insert(point.clone()));
-                max_y = if let Some(curr_max_y) = max_y {
-                    Some(cmp::max(curr_max_y, point.y))
-                } else {
-                    Some(point.y)
-                };
+                max_y = cmp::max(max_y, point.y);
+                // if let Some(curr_max_y) = max_y {
+                //     Some(cmp::max(curr_max_y, point.y))
+                // } else {
+                //     Some(point.y)
+                // };
             }
         }
-        let concrete_max_y = max_y.unwrap_or(CAVERN_FLOOR + 3);
-        for y in (0..(concrete_max_y + 1)).rev() {
+        // let concrete_max_y = max_y.unwrap_or(CAVERN_FLOOR + 3);
+        for y in (0..(max_y + 1)).rev() {
             for x in CAVERN_LEFT_EDGE..(CAVERN_RIGHT_EDGE + 1) {
                 let current_point = Point2D::new(x, y);
                 if (x == CAVERN_LEFT_EDGE || x == CAVERN_RIGHT_EDGE) && y == CAVERN_FLOOR {
@@ -388,6 +427,35 @@ impl Cavern {
             println!();
         }
         println!();
+    }
+
+    fn is_passable_horizontal_line(&self, y_val: i64) -> bool {
+        for x in CAVERN_LEFT_EDGE + 1..CAVERN_RIGHT_EDGE {
+            if !self.settled_rocks.contains(&Point2D::new(x, y_val))
+                && !self.settled_rocks.contains(&Point2D::new(x, y_val + 1))
+            {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn prune_unreachable_depths(&mut self, start: i64, end: i64) {
+        // println!("pruning, count: {}", self.added_rocks);
+        // for y in (self.last_reaped_y + 1..self.highest_y).rev() {
+        for y in (start..end).rev() {
+            if self.is_passable_horizontal_line(y) {
+                continue;
+            }
+            self.last_reaped_y = y;
+            // println!("found y: {}", y);
+            // self.draw_with_falling_rock(None);
+            // delete all entries in map which are strictly below y.
+            self.settled_rocks
+                .retain(|point| point.y >= self.last_reaped_y);
+            // self.draw_with_falling_rock(None);
+            return;
+        }
     }
 
     #[allow(dead_code)]
@@ -426,8 +494,17 @@ fn problem1(wind_source: WindSource) -> u64 {
     cavern.highest_y as u64
 }
 
-fn problem2(_: WindSource) -> u64 {
-    panic!("unimplemented")
+fn problem2(wind_source: WindSource) -> u64 {
+    println!("eager gc");
+    let mut cavern = Cavern::new(wind_source);
+    // the actual requirement:
+    // for _ in 0..1000000000000 {
+    // got a long way to go...
+    for _ in 0..10000000 {
+        cavern.add_rock();
+    }
+    assert!(cavern.highest_y >= 0);
+    cavern.highest_y as u64
 }
 
 pub fn solve<B: io::BufRead>(part: ProblemPart, br: B) -> Result<(), AOCError> {
