@@ -362,14 +362,9 @@ impl MonkeyMap for Cube {
     }
 
     fn initial_state(&self) -> CubeState {
-        let initial_flat_state = self.map.initial_state(); // State::initial_state(&self.map.board);
-                                                           // could maybe just hardcode Point3D::new(1, 1, 0)
-        let initial_position = self
-            .map_index_to_cube_coord(&(initial_flat_state.row, initial_flat_state.col))
-            .unwrap();
         // this assumes the first face is an x-y face on the z=0 plane.
         CubeState {
-            position: initial_position,
+            position: Point3D::new(1, 1, 0),
             heading: Point3D::new(1, 0, 0),
             normal: Point3D::new(0, 0, 1),
         }
@@ -595,12 +590,6 @@ impl Cube {
         self.assoc_list.get(point).copied()
     }
 
-    fn map_index_to_cube_coord(&self, map_index: &MapIndex) -> Option<Point3D> {
-        self.assoc_list
-            .iter()
-            .find_map(|(point, mi)| if mi == map_index { Some(*point) } else { None })
-    }
-
     fn at_edge(&self, coord: &Point3D) -> bool {
         // an edge is where 2 planes meet.
         let on_plane = |val| (val == 0 || val == (self.side_length + 1) as i64) as u8;
@@ -617,11 +606,7 @@ impl Cube {
         }
         let map_index = match self.cube_coord_to_map_index(&new_coord) {
             Some(mi) => mi,
-            None => {
-                panic!("we broke: current state: {:?}, new coord: {:?}, map_index of original: {:?}, at edge: {}",
-                       state, new_coord, self.cube_coord_to_map_index(&state.position), hit_edge
-                );
-            }
+            None => panic!("broke"),
         };
         let tile = self.map.board[map_index.0][map_index.1];
         if tile == Tile::Wall {
@@ -751,7 +736,7 @@ mod tests {
         let mut state = map.initial_state();
         for path_dir in map.path.iter() {
             let original_state = state.clone();
-            state.apply_path_direction(*path_dir, &map.board);
+            map.apply_path_direction(*path_dir, &mut state);
             if original_state.row != state.row || original_state.col != state.col {
                 draw_world(&original_state, &map.board);
                 println!("");
