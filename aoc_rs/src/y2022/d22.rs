@@ -5,6 +5,15 @@ use std::collections::{HashMap, HashSet};
 use std::io;
 use std::ops::{Add, Mul, Sub};
 
+trait MonkeyMap {
+    type State;
+
+    fn path_iter<'a>(&'a self) -> impl Iterator<Item = &'a PathDirection>;
+    fn initial_state(&self) -> Self::State;
+    fn password(&self, state: &Self::State) -> u64;
+    fn apply_path_direction(&self, path_dir: PathDirection, state: &mut Self::State);
+}
+
 #[derive(Copy, Clone, Debug)]
 enum Bearing {
     Right = 0,
@@ -61,20 +70,6 @@ fn compute_password(row_index: usize, col_index: usize, bearing: Bearing) -> u64
 }
 
 impl State {
-    fn apply_path_direction(&mut self, dir: PathDirection, board: &Board) {
-        match dir {
-            PathDirection::TurnLeft => self.bearing = self.bearing.turn_left(),
-            PathDirection::TurnRight => self.bearing = self.bearing.turn_right(),
-            PathDirection::Forward(n) => {
-                for _ in 0..n {
-                    if !self.step_forward(board) {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
     fn advance(&mut self, board: &Board) {
         match self.bearing {
             Bearing::Right => self.col = incr_mod(self.col, board[self.row].len()),
@@ -100,22 +95,6 @@ impl State {
         } else {
             false
         }
-    }
-
-    fn initial_state(board: &Board) -> State {
-        let mut state = State {
-            row: 0,
-            col: 0,
-            bearing: Bearing::Right,
-        };
-        while state.tile_at(board) == Tile::Void {
-            state.advance(board);
-        }
-        state
-    }
-
-    fn password(&self) -> u64 {
-        compute_password(self.row, self.col, self.bearing)
     }
 }
 
@@ -169,6 +148,44 @@ struct Map {
     num_rows: usize,
     num_cols: usize,
     path: Vec<PathDirection>,
+}
+
+impl MonkeyMap for Map {
+    type State = State;
+
+    fn path_iter<'a>(&'a self) -> impl Iterator<Item = &'a PathDirection> {
+        self.path.iter()
+    }
+
+    fn initial_state(&self) -> State {
+        let mut state = State {
+            row: 0,
+            col: 0,
+            bearing: Bearing::Right,
+        };
+        while state.tile_at(&self.board) == Tile::Void {
+            state.advance(&self.board);
+        }
+        state
+    }
+
+    fn password(&self, state: &Self::State) -> u64 {
+        compute_password(state.row, state.col, state.bearing)
+    }
+
+    fn apply_path_direction(&self, dir: PathDirection, state: &mut Self::State) {
+        match dir {
+            PathDirection::TurnLeft => state.bearing = state.bearing.turn_left(),
+            PathDirection::TurnRight => state.bearing = state.bearing.turn_right(),
+            PathDirection::Forward(n) => {
+                for _ in 0..n {
+                    if !state.step_forward(&self.board) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Map {
@@ -335,6 +352,57 @@ struct Cube {
     map: Map,
     assoc_list: HashMap<Point3D, MapIndex>,
     side_length: usize,
+}
+
+impl MonkeyMap for Cube {
+    type State = CubeState;
+
+    fn path_iter<'a>(&'a self) -> impl Iterator<Item = &'a PathDirection> {
+        self.map.path_iter()
+    }
+
+    fn initial_state(&self) -> CubeState {
+        let initial_flat_state = self.map.initial_state(); // State::initial_state(&self.map.board);
+                                                           // could maybe just hardcode Point3D::new(1, 1, 0)
+        let initial_position = self
+            .map_index_to_cube_coord(&(initial_flat_state.row, initial_flat_state.col))
+            .unwrap();
+        // this assumes the first face is an x-y face on the z=0 plane.
+        CubeState {
+            position: initial_position,
+            heading: Point3D::new(1, 0, 0),
+            normal: Point3D::new(0, 0, 1),
+        }
+    }
+
+    fn password(&self, state: &CubeState) -> u64 {
+        let map_index = self.cube_coord_to_map_index(&state.position).unwrap();
+        let cube_coord_in_front = state.position + state.heading;
+        let bearing =
+            if let Some(map_index_in_front) = self.cube_coord_to_map_index(&cube_coord_in_front) {
+                Cube::bearing_from_coords(&map_index, &map_index_in_front)
+            } else {
+                let cube_coord_behind = state.position - state.heading;
+                // fails on a 1x1 face
+                let behind = self.cube_coord_to_map_index(&cube_coord_behind).unwrap();
+                Cube::bearing_from_coords(&behind, &map_index)
+            };
+        compute_password(map_index.0, map_index.1, bearing)
+    }
+
+    fn apply_path_direction(&self, path_dir: PathDirection, state: &mut CubeState) {
+        match path_dir {
+            PathDirection::TurnLeft => state.heading = state.heading.cross_prod(&state.normal),
+            PathDirection::TurnRight => state.heading = state.normal.cross_prod(&state.heading),
+            PathDirection::Forward(n) => {
+                for _ in 0..n {
+                    if !self.step_forward(state) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Cube {
@@ -533,34 +601,6 @@ impl Cube {
             .find_map(|(point, mi)| if mi == map_index { Some(*point) } else { None })
     }
 
-    fn initial_state(&self) -> CubeState {
-        let initial_flat_state = State::initial_state(&self.map.board);
-        // could maybe just hardcode Point3D::new(1, 1, 0)
-        let initial_position = self
-            .map_index_to_cube_coord(&(initial_flat_state.row, initial_flat_state.col))
-            .unwrap();
-        // this assumes the first face is an x-y face on the z=0 plane.
-        CubeState {
-            position: initial_position,
-            heading: Point3D::new(1, 0, 0),
-            normal: Point3D::new(0, 0, 1),
-        }
-    }
-
-    fn apply_path_direction(&self, path_dir: PathDirection, state: &mut CubeState) {
-        match path_dir {
-            PathDirection::TurnLeft => state.heading = state.heading.cross_prod(&state.normal),
-            PathDirection::TurnRight => state.heading = state.normal.cross_prod(&state.heading),
-            PathDirection::Forward(n) => {
-                for _ in 0..n {
-                    if !self.step_forward(state) {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
     fn at_edge(&self, coord: &Point3D) -> bool {
         // an edge is where 2 planes meet.
         let on_plane = |val| (val == 0 || val == (self.side_length + 1) as i64) as u8;
@@ -615,21 +655,6 @@ impl Cube {
             Bearing::Up
         }
     }
-
-    fn password(&self, state: &CubeState) -> u64 {
-        let map_index = self.cube_coord_to_map_index(&state.position).unwrap();
-        let cube_coord_in_front = state.position + state.heading;
-        let bearing =
-            if let Some(map_index_in_front) = self.cube_coord_to_map_index(&cube_coord_in_front) {
-                Cube::bearing_from_coords(&map_index, &map_index_in_front)
-            } else {
-                let cube_coord_behind = state.position - state.heading;
-                // fails on a 1x1 face
-                let behind = self.cube_coord_to_map_index(&cube_coord_behind).unwrap();
-                Cube::bearing_from_coords(&behind, &map_index)
-            };
-        compute_password(map_index.0, map_index.1, bearing)
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -639,21 +664,21 @@ struct CubeState {
     normal: Point3D,
 }
 
-fn problem1(map: Map) -> u64 {
-    let mut state = State::initial_state(&map.board);
-    for path_dir in map.path.iter() {
-        state.apply_path_direction(*path_dir, &map.board);
+fn walk_path<M: MonkeyMap>(map: M) -> u64 {
+    let mut state = map.initial_state();
+    for path_dir in map.path_iter() {
+        map.apply_path_direction(*path_dir, &mut state);
     }
-    state.password()
+    map.password(&state)
+}
+
+fn problem1(map: Map) -> u64 {
+    walk_path(map)
 }
 
 fn problem2(map: Map) -> u64 {
     let cube = Cube::fold_map(map).unwrap();
-    let mut state = cube.initial_state();
-    for path_dir in cube.map.path.iter() {
-        cube.apply_path_direction(*path_dir, &mut state);
-    }
-    cube.password(&state)
+    walk_path(cube)
 }
 
 pub fn solve<B: io::BufRead>(part: ProblemPart, br: B) -> Result<(), AOCError> {
@@ -723,7 +748,7 @@ mod tests {
     fn example() {
         let input = get_example_lines();
         let map = Map::from_lines(&input).unwrap();
-        let mut state = State::initial_state(&map.board);
+        let mut state = map.initial_state();
         for path_dir in map.path.iter() {
             let original_state = state.clone();
             state.apply_path_direction(*path_dir, &map.board);
@@ -733,7 +758,7 @@ mod tests {
             }
         }
         draw_world(&state, &map.board);
-        assert_eq!(state.password(), 6032);
+        assert_eq!(map.password(&state), 6032);
     }
 
     #[test]
