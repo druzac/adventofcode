@@ -218,12 +218,13 @@ impl Field {
         }
     }
 
-    fn execute_round(&mut self) {
+    fn execute_round(&mut self) -> bool {
         let mut proposed_moves = HashMap::new();
         let mut impossible_moves = HashSet::new();
         for coord in self.map.iter() {
             self.elf_proposal(coord, &mut proposed_moves, &mut impossible_moves);
         }
+        let made_change = !proposed_moves.is_empty();
         for (new_coord, old_coord) in proposed_moves.drain() {
             match self.map.remove(&old_coord) {
                 true => {
@@ -233,7 +234,8 @@ impl Field {
                 false => panic!("unreachable"),
             }
         }
-        self.direction_idx += 1;
+        self.direction_idx = (self.direction_idx + 1) % 4;
+        made_change
     }
 
     fn count_empty_ground_tiles(&self) -> u64 {
@@ -295,8 +297,15 @@ fn problem1(mut field: Field) -> u64 {
     field.count_empty_ground_tiles()
 }
 
-fn problem2(_: Field) -> u64 {
-    0
+fn problem2(mut field: Field) -> u64 {
+    let mut cnt = 0;
+    loop {
+        cnt += 1;
+        if !field.execute_round() {
+            break;
+        }
+    }
+    cnt
 }
 
 fn solve_inner<B: io::BufRead>(part: ProblemPart, br: B) -> Result<u64, AOCError> {
@@ -503,5 +512,11 @@ mod tests {
     fn example_p1() {
         let field = Field::parse(get_example_br()).unwrap();
         assert_eq!(problem1(field), 110);
+    }
+
+    #[test]
+    fn example_p2() {
+        let field = Field::parse(get_example_br()).unwrap();
+        assert_eq!(problem2(field), 20);
     }
 }
