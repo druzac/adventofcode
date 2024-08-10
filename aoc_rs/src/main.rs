@@ -1,4 +1,5 @@
 mod y2022;
+mod y2023;
 
 use std::env;
 use std::fs;
@@ -100,6 +101,7 @@ fn main() -> Result<(), AOCError> {
     let br = io::BufReader::new(fs::File::open(&input_path)?);
     match args[1].as_str() {
         "2022" => y2022::solve(day, part, br),
+        "2023" => y2023::solve(day, part, br),
         _ => panic!(),
     }
 }
